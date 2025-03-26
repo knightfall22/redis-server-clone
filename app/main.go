@@ -61,7 +61,6 @@ func main() {
 
 				result := handle(args)
 				writer.Write(result)
-				conn.Write([]byte("+PONG\r\n"))
 			}
 		}(conn)
 	}
