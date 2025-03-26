@@ -28,7 +28,7 @@ func main() {
 
 		defer conn.Close()
 
-		go func() {
+		go func(conn net.Conn) {
 			buf := make([]byte, 1024)
 			_, err = conn.Read(buf)
 			if err != nil && err != io.EOF {
@@ -37,6 +37,6 @@ func main() {
 			}
 
 			conn.Write([]byte("+PONG\r\n"))
-		}()
+		}(conn)
 	}
 }
