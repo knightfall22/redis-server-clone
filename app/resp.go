@@ -208,5 +208,6 @@ func (v *Value) marshalError() (bytes []byte) {
 }
 
 func (v *Value) marshalNull() []byte {
+	//Default
 	return []byte("$-1\r\n")
 }
