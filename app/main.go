@@ -26,17 +26,21 @@ func main() {
 			os.Exit(1)
 		}
 
-		defer conn.Close()
-
 		go func(conn net.Conn) {
-			buf := make([]byte, 1024)
-			_, err = conn.Read(buf)
-			if err != nil && err != io.EOF {
-				fmt.Println("Error reading from connection", err.Error())
-				os.Exit(1)
-			}
+			defer conn.Close()
+			for {
+				buf := make([]byte, 1024)
+				_, err = conn.Read(buf)
+				if err != nil {
+					if err == io.EOF {
+						break
+					}
+					fmt.Println("Error reading from connection", err.Error())
+					os.Exit(1)
+				}
 
-			conn.Write([]byte("+PONG\r\n"))
+				conn.Write([]byte("+PONG\r\n"))
+			}
 		}(conn)
 	}
 }
