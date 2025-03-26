@@ -27,7 +27,7 @@ func echo(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'echo' command"}
 	}
 
-	return Value{typ: "string", str: args[0].bulk}
+	return Value{typ: "bulk", str: args[0].bulk}
 }
 
 var SETs = map[string]string{}
