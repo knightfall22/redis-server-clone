@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -29,16 +29,38 @@ func main() {
 		go func(conn net.Conn) {
 			defer conn.Close()
 			for {
-				buf := make([]byte, 1024)
-				_, err = conn.Read(buf)
+
+				resp := NewResp(conn)
+				value, err := resp.Read()
 				if err != nil {
-					if err == io.EOF {
-						break
-					}
 					fmt.Println("Error reading from connection", err.Error())
-					os.Exit(1)
+					return
 				}
 
+				if value.typ != "array" {
+					fmt.Println("Invalid request, expected array")
+					continue
+				}
+
+				if len(value.array) == 0 {
+					fmt.Println("Invalid request, expected array length > 0")
+					continue
+				}
+
+				command := strings.ToUpper(value.array[0].bulk)
+				args := value.array[1:]
+
+				writer := NewWriter(conn)
+
+				handle, ok := Handlers[command]
+				if !ok {
+					fmt.Println("Invalid command: ", command)
+					writer.Write(Value{typ: "string", str: ""})
+					continue
+				}
+
+				result := handle(args)
+				writer.Write(result)
 				conn.Write([]byte("+PONG\r\n"))
 			}
 		}(conn)
