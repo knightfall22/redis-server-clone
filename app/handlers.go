@@ -39,7 +39,10 @@ func echo(args []Value) Value {
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
-var Config = map[string]string{}
+var Config = map[string]string{
+	"dir":        "/tmp/redis-data",
+	"dbfilename": "database.aof",
+}
 var ConfigMu = sync.RWMutex{}
 
 func config(args []Value) Value {
@@ -84,7 +87,17 @@ func configGet(args []Value) Value {
 }
 
 func configGetAll() Value {
-	return Value{}
+	result := Value{typ: "array"}
+
+	ConfigMu.RLock()
+	defer ConfigMu.RUnlock()
+
+	for k, v := range Config {
+		result.array = append(result.array, Value{typ: "bulk", bulk: k})
+		result.array = append(result.array, Value{typ: "bulk", bulk: v})
+	}
+
+	return result
 }
 
 func configSet(args []Value) Value {
