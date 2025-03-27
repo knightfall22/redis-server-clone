@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -67,6 +68,7 @@ func configGet(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'config get' command"}
 	}
 
+	fmt.Printf("args: %#v\n", args)
 	k := args[0].bulk
 	ConfigMu.Lock()
 	defer ConfigMu.Unlock()
@@ -76,10 +78,12 @@ func configGet(args []Value) Value {
 		return Value{typ: "null"}
 	}
 
+	fmt.Printf("Config %+v\n", Config)
+
 	arrVal := Value{typ: "array"}
 	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: k})
 	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: val})
-
+	fmt.Printf("arrVal: %#v\n", arrVal)
 	return arrVal
 }
 

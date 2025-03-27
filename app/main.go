@@ -13,14 +13,14 @@ func main() {
 	fmt.Println("Logs from your program will appear here!")
 
 	//Flags to accept the configs
-	dir := *flag.String("dir", "", "Directory containing db file")
-	dbfilename := *flag.String("dbfilename", "database.aof", "Database file")
+	dir := flag.String("dir", "", "Directory containing db file")
+	dbfilename := flag.String("dbfilename", "database.aof", "Database file")
 
 	flag.Parse()
 
 	ConfigMu.Lock()
-	Config["dir"] = dir
-	Config["dbfilename"] = dbfilename
+	Config["dir"] = *dir
+	Config["dbfilename"] = *dbfilename
 	ConfigMu.Unlock()
 
 	// Uncomment this block to pass the first stage
