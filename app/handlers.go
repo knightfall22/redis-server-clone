@@ -1,7 +1,10 @@
 package main
 
 import (
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 )
 
 var Handlers = map[string]func([]Value) Value{
@@ -12,6 +15,11 @@ var Handlers = map[string]func([]Value) Value{
 	"HGET":    hget,
 	"HGETALL": hgetall,
 	"ECHO":    echo,
+}
+
+type setVal struct {
+	value   string
+	timeout *time.Time
 }
 
 func ping(args []Value) Value {
@@ -30,16 +38,35 @@ func echo(args []Value) Value {
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
-var SETs = map[string]string{}
+var SETs = map[string]setVal{}
 var SETsMu = sync.RWMutex{}
 
 func set(args []Value) Value {
-	if len(args) != 2 {
+	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
 	}
 
+	var value setVal
 	key := args[0].bulk
-	value := args[1].bulk
+
+	if len(args) == 4 {
+		command := strings.ToUpper(args[2].bulk)
+
+		if command == "PX" {
+			t_out, err := strconv.Atoi(args[3].bulk)
+
+			if err != nil {
+				return Value{typ: "error", str: "ERR invalid timeout value for 'PX' command"}
+			}
+
+			timeout := time.Now().Add(time.Millisecond * time.Duration(t_out))
+			value.value = args[1].bulk
+			value.timeout = &timeout
+		}
+	} else {
+		value.value = args[1].bulk
+		value.timeout = nil
+	}
 
 	SETsMu.Lock()
 	SETs[key] = value
@@ -63,7 +90,15 @@ func get(args []Value) Value {
 		return Value{typ: "null"}
 	}
 
-	return Value{typ: "bulk", bulk: val}
+	if val.timeout != nil && val.timeout.Before(time.Now()) {
+		SETsMu.Lock()
+		delete(SETs, key)
+		SETsMu.Unlock()
+
+		return Value{typ: "null"}
+	}
+
+	return Value{typ: "bulk", bulk: val.value}
 }
 
 var HSETs = map[string]map[string]string{}
