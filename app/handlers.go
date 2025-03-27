@@ -101,7 +101,19 @@ func configGetAll() Value {
 }
 
 func configSet(args []Value) Value {
-	return Value{}
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
+	}
+
+	key := args[0].bulk
+	value := args[1].bulk
+
+	ConfigMu.Lock()
+	Config[key] = value
+	ConfigMu.Unlock()
+
+	return Value{typ: "string", str: "OK"}
+
 }
 
 var SETs = map[string]setVal{}
