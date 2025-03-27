@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -10,6 +11,17 @@ import (
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
+
+	//Flags to accept the configs
+	dir := *flag.String("dir", "", "Directory containing db file")
+	dbfilename := *flag.String("dbfilename", "database.aof", "Database file")
+
+	flag.Parse()
+
+	ConfigMu.Lock()
+	Config["dir"] = dir
+	Config["dbfilename"] = dbfilename
+	ConfigMu.Unlock()
 
 	// Uncomment this block to pass the first stage
 	//
