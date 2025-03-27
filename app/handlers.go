@@ -15,6 +15,7 @@ var Handlers = map[string]func([]Value) Value{
 	"HGET":    hget,
 	"HGETALL": hgetall,
 	"ECHO":    echo,
+	"CONFIG":  config,
 }
 
 type setVal struct {
@@ -36,6 +37,58 @@ func echo(args []Value) Value {
 	}
 
 	return Value{typ: "bulk", bulk: args[0].bulk}
+}
+
+var Config = map[string]string{}
+var ConfigMu = sync.RWMutex{}
+
+func config(args []Value) Value {
+	if len(args) == 0 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'config' command"}
+	}
+
+	command := strings.ToUpper(args[0].bulk)
+
+	switch command {
+	case "GET":
+		if len(args) == 1 {
+			return configGetAll()
+		}
+		return configGet(args[1:])
+	case "SET":
+		return configSet(args[1:])
+	}
+
+	return Value{typ: "error", str: "ERR error has occured with the 'config' command"}
+}
+
+func configGet(args []Value) Value {
+	if len(args) == 0 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'config get' command"}
+	}
+
+	k := args[0].bulk
+	ConfigMu.Lock()
+	defer ConfigMu.Unlock()
+	val, ok := Config[k]
+
+	if !ok {
+		return Value{typ: "null"}
+	}
+
+	arrVal := Value{typ: "array"}
+	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: k})
+	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: val})
+
+	return arrVal
+}
+
+func configGetAll() Value {
+	return Value{}
+}
+
+func configSet(args []Value) Value {
+	return Value{}
 }
 
 var SETs = map[string]setVal{}
