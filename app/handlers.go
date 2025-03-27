@@ -39,10 +39,7 @@ func echo(args []Value) Value {
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
-var Config = map[string]string{
-	"dir":        "/tmp/redis-data",
-	"dbfilename": "database.aof",
-}
+var Config = map[string]string{}
 var ConfigMu = sync.RWMutex{}
 
 func config(args []Value) Value {
