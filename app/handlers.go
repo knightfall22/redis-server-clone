@@ -17,6 +17,7 @@ var Handlers = map[string]func([]Value) Value{
 	"HGETALL": hgetall,
 	"ECHO":    echo,
 	"CONFIG":  config,
+	"KEYS":    keys,
 }
 
 type setVal struct {
@@ -243,6 +244,23 @@ func hgetall(args []Value) Value {
 
 	for _, v := range val {
 		arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: v})
+	}
+
+	return arrVal
+}
+
+func keys(args []Value) Value {
+	if len(args) < 1 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'key' command"}
+	}
+
+	SETsMu.RLock()
+	defer SETsMu.RUnlock()
+
+	arrVal := Value{typ: "array"}
+
+	for k, _ := range SETs {
+		arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: k})
 	}
 
 	return arrVal
