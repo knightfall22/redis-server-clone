@@ -24,7 +24,7 @@ func main() {
 	Config["dbfilename"] = *dbfilename
 	ConfigMu.Unlock()
 
-	dec := NewDecoder(*dir + "/" + *dbfilename)
+	dec := NewDecoder(Config["dir"] + "/" + Config["dbfilename"])
 	err := dec.Reader()
 	if err != nil {
 		fmt.Println("Err: error has occurred: ", err)
