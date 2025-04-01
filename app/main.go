@@ -25,10 +25,14 @@ func main() {
 	ConfigMu.Unlock()
 
 	dec := NewDecoder(Config["dir"] + "/" + Config["dbfilename"])
-	err := dec.Reader()
-	if err != nil {
-		fmt.Println("Err: error has occurred: ", err)
-		os.Exit(1)
+
+	//when file is found
+	if dec != nil {
+		err := dec.Reader()
+		if err != nil {
+			fmt.Println("Err: error has occurred: ", err)
+			os.Exit(1)
+		}
 	}
 
 	// Uncomment this block to pass the first stage
