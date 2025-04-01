@@ -35,6 +35,7 @@ func main() {
 		}
 	}
 
+	fmt.Println("SETS", SETsMu)
 	// Uncomment this block to pass the first stage
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
