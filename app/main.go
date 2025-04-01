@@ -13,7 +13,7 @@ func main() {
 	fmt.Println("Logs from your program will appear here!")
 
 	//Flags to accept the configs
-	dir := flag.String("dir", "", "Directory containing db file")
+	dir := flag.String("dir", ".", "Directory containing db file")
 	dbfilename := flag.String("dbfilename", "dump.rdb", "Database file")
 
 	flag.Parse()
@@ -24,14 +24,12 @@ func main() {
 	Config["dbfilename"] = *dbfilename
 	ConfigMu.Unlock()
 
-	dec := NewDecoder("dump.rdb")
+	dec := NewDecoder(*dir + "/" + *dbfilename)
 	err := dec.Reader()
 	if err != nil {
 		fmt.Println("Err: error has occurred: ", err)
 		os.Exit(1)
 	}
-
-	fmt.Println(SETs)
 
 	// Uncomment this block to pass the first stage
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
