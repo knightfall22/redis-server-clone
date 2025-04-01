@@ -97,7 +97,7 @@ func (r *Decoder) processHash(hlen int64) error {
 func (r *Decoder) readLine() (string, error) {
 	//current byte would by of encoded length
 	//0Xc0 - 11000000
-	fmt.Println(r.b)
+	fmt.Printf("r.b: 0x%X (%08b)\n", r.b, r.b)
 	// typ := (b & 0xc0) >> 6
 	typ := (r.b & 0xc0) >> 6
 	fmt.Println("typ", typ)
