@@ -30,7 +30,7 @@ func NewDecoder(dir string) *Decoder {
 	f, err := os.Open(dir)
 	if err != nil {
 		fmt.Println("err: error has occurred opening file: ", err)
-		os.Exit(1)
+		return nil //when file is not found. Means db is empty
 	}
 
 	return &Decoder{

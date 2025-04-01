@@ -25,11 +25,11 @@ func main() {
 	ConfigMu.Unlock()
 
 	dec := NewDecoder(Config["dir"] + "/" + Config["dbfilename"])
-	_ = dec.Reader()
-	// if err != nil {
-	// 	fmt.Println("Err: error has occurred: ", err)
-	// 	os.Exit(1)
-	// }
+	err := dec.Reader()
+	if err != nil {
+		fmt.Println("Err: error has occurred: ", err)
+		os.Exit(1)
+	}
 
 	// Uncomment this block to pass the first stage
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
