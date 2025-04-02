@@ -15,7 +15,8 @@ func main() {
 	//Flags to accept the configs
 	dir := flag.String("dir", ".", "Directory containing db file")
 	dbfilename := flag.String("dbfilename", "dump.rdb", "Database file")
-	port := flag.Int("port", 6379, "Port number")
+	port := flag.String("port", "6379", "Port number")
+	replicaOf := flag.String("replicaof", "", "set has replica of a master")
 
 	flag.Parse()
 
@@ -23,6 +24,8 @@ func main() {
 	ConfigMu.Lock()
 	Config["dir"] = *dir
 	Config["dbfilename"] = *dbfilename
+	Config["port"] = *port
+	Config["replicaOf"] = *replicaOf
 	ConfigMu.Unlock()
 
 	dec := NewDecoder(Config["dir"] + "/" + Config["dbfilename"])
@@ -38,7 +41,7 @@ func main() {
 
 	fmt.Println("SETS", SETs)
 	// Uncomment this block to pass the first stage
-	url := fmt.Sprintf("localhost:%d", *port)
+	url := fmt.Sprintf("localhost:%s", *port)
 	l, err := net.Listen("tcp", url)
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
