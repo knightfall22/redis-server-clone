@@ -58,6 +58,21 @@ func main() {
 
 		resp := NewResp(conn)
 		value, err := resp.Read()
+		if err != nil {
+			fmt.Println("Error reading from connection", err.Error())
+			return
+		}
+
+		if value.typ != "array" {
+			fmt.Println("Invalid request, expected array")
+			return
+		}
+
+		if len(value.array) == 0 {
+			fmt.Println("Invalid request, expected array length > 0")
+			return
+		}
+
 		command := strings.ToUpper(value.array[0].bulk)
 		args := value.array[1:]
 
