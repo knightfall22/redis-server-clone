@@ -305,6 +305,7 @@ func replicationInfo() Value {
 }
 
 func replconf(args []Value) Value {
+	fmt.Println("from master")
 	return Value{typ: "string", str: "OK"}
 }
 
@@ -314,6 +315,7 @@ func ping2() Value {
 }
 
 func replconfLWriter(port string) Value {
+	fmt.Println("Sending First")
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "REPLCONF"},
 		{typ: "bulk", bulk: "listening-port"},
@@ -322,6 +324,7 @@ func replconfLWriter(port string) Value {
 	}
 }
 func replconfCWriter() Value {
+	fmt.Println("Sending Second")
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "REPLCONF"},
 		{typ: "bulk", bulk: "capa"},

@@ -59,8 +59,8 @@ func main() {
 		writer := NewWriter(conn)
 		writer.Write(ping2())
 
-		// writer.Write(replconfLWriter(*port))
-		// writer.Write(replconfCWriter())
+		writer.Write(replconfLWriter(*port))
+		writer.Write(replconfCWriter())
 	}
 
 	// Uncomment this block to pass the first stage
