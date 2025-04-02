@@ -60,9 +60,10 @@ func main() {
 		writer := NewWriter(conn)
 		writer.Write(ping2())
 
+		time.Sleep(time.Second * 2)
 		writer.Write(replconfLWriter(*port))
+		time.Sleep(time.Second * 2)
 		writer.Write(replconfCWriter())
-		time.Sleep(2 * time.Second)
 	}
 
 	// Uncomment this block to pass the first stage
