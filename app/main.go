@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -61,6 +62,7 @@ func main() {
 
 		writer.Write(replconfLWriter(*port))
 		writer.Write(replconfCWriter())
+		time.Sleep(2 * time.Second)
 	}
 
 	// Uncomment this block to pass the first stage
