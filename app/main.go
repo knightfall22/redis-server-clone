@@ -50,6 +50,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Println("Connected on port" + *port)
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
