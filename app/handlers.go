@@ -20,6 +20,7 @@ var Handlers = map[string]func([]Value) Value{
 	"KEYS":     keys,
 	"INFO":     info,
 	"REPLCONF": replconf,
+	"PSYNC":    replconf,
 }
 
 type setVal struct {
@@ -331,4 +332,12 @@ func replconfCWriter() Value {
 		{typ: "bulk", bulk: "psync2"},
 	},
 	}
+}
+
+func psyncWrite() Value {
+	return Value{typ: "array", array: []Value{
+		{typ: "bulk", bulk: "psync"},
+		{typ: "bulk", bulk: "?"},
+		{typ: "bulk", bulk: "-1"},
+	}}
 }

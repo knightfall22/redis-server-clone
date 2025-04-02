@@ -142,11 +142,11 @@ func (r *Resp) readBulk() (Value, error) {
 // Writing Resp
 
 type Writer struct {
-	writer io.Writer
+	writer *bufio.Writer
 }
 
 func NewWriter(w io.Writer) *Writer {
-	return &Writer{writer: w}
+	return &Writer{writer: bufio.NewWriter(w)}
 }
 
 func (w *Writer) Write(v Value) error {
@@ -156,7 +156,7 @@ func (w *Writer) Write(v Value) error {
 	if err != nil {
 		return err
 	}
-	return nil
+	return w.writer.Flush()
 }
 
 // Convert response to bytes representing the response RESP
