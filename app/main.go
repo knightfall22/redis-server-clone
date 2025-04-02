@@ -20,8 +20,6 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Println(*replicaOf)
-
 	//Configuration setup
 	ConfigMu.Lock()
 	Config["dir"] = *dir
@@ -44,6 +42,16 @@ func main() {
 	}
 
 	fmt.Println("SETS", SETs)
+
+	//if slave connect to master
+	if *replicaOf != "" {
+		_, err := net.Dial("tcp", *replicaOf)
+		if err != nil {
+			fmt.Println("Failed to bind to port 6379")
+			os.Exit(1)
+		}
+	}
+
 	// Uncomment this block to pass the first stage
 	url := fmt.Sprintf("localhost:%s", *port)
 	l, err := net.Listen("tcp", url)
