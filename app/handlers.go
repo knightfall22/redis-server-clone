@@ -9,16 +9,17 @@ import (
 )
 
 var Handlers = map[string]func([]Value) Value{
-	"PING":    ping,
-	"SET":     set,
-	"GET":     get,
-	"HSET":    hset,
-	"HGET":    hget,
-	"HGETALL": hgetall,
-	"ECHO":    echo,
-	"CONFIG":  config,
-	"KEYS":    keys,
-	"INFO":    info,
+	"PING":     ping,
+	"SET":      set,
+	"GET":      get,
+	"HSET":     hset,
+	"HGET":     hget,
+	"HGETALL":  hgetall,
+	"ECHO":     echo,
+	"CONFIG":   config,
+	"KEYS":     keys,
+	"INFO":     info,
+	"REPLCONF": replconf,
 }
 
 type setVal struct {
@@ -303,18 +304,20 @@ func replicationInfo() Value {
 	return Value{typ: "bulk", bulk: strOut}
 }
 
-//This is definetely redundant and pointles.
-//The only reason it exist is because of the "*1\r\n$4\r\nPING\r\n" return
-//Save commands
-
-var SlaveHandlers = map[string]func([]Value) Value{
-	"REPLCONF": replconf,
+func replconf(args []Value) Value {
+	return Value{typ: "string", str: "OK"}
 }
 
+// Slave commands
 func ping2() Value {
 	return Value{typ: "array", array: []Value{{typ: "bulk", bulk: "PING"}}}
 }
 
-func replconf(args []Value) Value {
-	return Value{typ: "string", str: "OK"}
+func replconfwriter(port string) Value {
+	return Value{typ: "array", array: []Value{
+		{typ: "bulk", bulk: "REPLCONF"},
+		{typ: "bulk", bulk: "listening-port"},
+		{typ: "bulk", bulk: port},
+	},
+	}
 }
