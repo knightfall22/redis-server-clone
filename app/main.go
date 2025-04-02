@@ -15,6 +15,7 @@ func main() {
 	//Flags to accept the configs
 	dir := flag.String("dir", ".", "Directory containing db file")
 	dbfilename := flag.String("dbfilename", "dump.rdb", "Database file")
+	port := flag.Int("port", 6379, "Port number")
 
 	flag.Parse()
 
@@ -35,9 +36,10 @@ func main() {
 		}
 	}
 
-	fmt.Println("SETS", SETsMu)
+	fmt.Println("SETS", SETs)
 	// Uncomment this block to pass the first stage
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	url := fmt.Sprintf("localhost:%d", *port)
+	l, err := net.Listen("tcp", url)
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)

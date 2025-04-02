@@ -59,15 +59,11 @@ func (r *Decoder) Reader() error {
 	}
 
 	//Get length of hash table and length of expiration table
-	hlen, elen, err := r.getTablesLength()
+	hlen, _, err := r.getTablesLength()
 	if err != nil {
 		fmt.Println("err: error has occurred from gettableLenght: ", err)
 		return err
 	}
-
-	fmt.Println("hash length", hlen)
-	fmt.Println(elen)
-	fmt.Println("current byte", r.b)
 
 	//Build key value pairs for hash table
 	r.processHash(hlen)
@@ -90,9 +86,7 @@ func (r *Decoder) processHash(hlen int64) error {
 func (r *Decoder) process(val *setVal) error {
 	switch r.b {
 	case STRINGTYP:
-		fmt.Println("STRINGTYP")
 		err := r.advance()
-		fmt.Println("string advance", r.b)
 		if err != nil {
 			fmt.Println("err: error has occurred from process: ", err)
 			return err
@@ -109,9 +103,17 @@ func (r *Decoder) process(val *setVal) error {
 		}
 
 		SETsMu.Lock()
+		defer SETsMu.Unlock()
 		//This might not be the best way to do this
 		if val != nil {
 			//If val is not nil then our timeout property exists
+
+			// If expired return
+			if val.timeout.Before(time.Now()) {
+
+				return nil
+			}
+
 			val.value = value
 			SETs[key] = *val
 		} else {
@@ -119,11 +121,10 @@ func (r *Decoder) process(val *setVal) error {
 		}
 
 		fmt.Println("SETs: ", SETs)
-		SETsMu.Unlock()
+
 		return nil
 
 	case EXPIREMS:
-		fmt.Println("EXPIREMS")
 		timeout, err := r.readLine()
 		if err != nil {
 			fmt.Println("err: error has occurred from process: ", err)
@@ -150,8 +151,6 @@ func (r *Decoder) process(val *setVal) error {
 func (r *Decoder) readLine() (string, error) {
 	//current byte would by of encoded length
 	//0Xc0 - 11000000
-	fmt.Printf("r.b: 0x%X (%08b)\n", r.b, r.b)
-	// typ := (b & 0xc0) >> 6
 	typ := (r.b & 0xc0) >> 6
 	switch typ {
 	case SIXBIT:
@@ -164,7 +163,7 @@ func (r *Decoder) readLine() (string, error) {
 		}
 
 		return string(val), nil
-	//Todo: 14 bit case is not being meet need to fix that
+
 	case FOURTEENBIT:
 		b := r.b
 		err := r.advance()
@@ -183,7 +182,7 @@ func (r *Decoder) readLine() (string, error) {
 		return string(val), nil
 
 	case ENCODEDVALUEBIT:
-		_typ := byte(r.b&0x3f) >> 4 //Shift right 4 bits
+		_typ := (r.b & 0x3f) >> 4 //Shift right 4 bits to get the type
 		return r.handleSpecialCase(_typ)
 
 	}
@@ -222,7 +221,6 @@ func (r *Decoder) handleSpecialCase(b byte) (string, error) {
 
 		return bytesToString(val), nil
 	case SIXTYFOURBITINT:
-		fmt.Println("Hello")
 		val := make([]byte, 8)
 		err := r.read(&val)
 		if err != nil {
@@ -250,8 +248,6 @@ func (r *Decoder) getTablesLength() (int64, int64, error) {
 		fmt.Println("Err: error has occurred: ", err)
 		return 0, 0, err
 	}
-
-	fmt.Println(lengths)
 
 	return int64(lengths[0]), int64(lengths[1]), nil
 }
