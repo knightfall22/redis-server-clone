@@ -287,6 +287,7 @@ func replicationInfo() Value {
 	defer ConfigMu.RUnlock()
 	if _, ok := Config["replicaOf"]; ok {
 		return Value{typ: "bulk", bulk: "role:slave"}
+	} else {
+		return Value{typ: "bulk", bulk: "role:master"}
 	}
-	return Value{typ: "bulk", bulk: "role:master"}
 }
