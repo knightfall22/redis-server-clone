@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -59,8 +60,11 @@ func main() {
 		writer := NewWriter(conn)
 		writer.Write(ping2())
 
+		time.Sleep(time.Second * 1)
 		writer.Write(replconfLWriter(*port))
+		time.Sleep(time.Second * 1)
 		writer.Write(replconfCWriter())
+		time.Sleep(time.Second * 1)
 		writer.Write(psyncWrite())
 	}
 
