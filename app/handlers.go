@@ -18,6 +18,7 @@ var Handlers = map[string]func([]Value) Value{
 	"ECHO":    echo,
 	"CONFIG":  config,
 	"KEYS":    keys,
+	"INFO":    info,
 }
 
 type setVal struct {
@@ -264,4 +265,23 @@ func keys(args []Value) Value {
 	}
 
 	return arrVal
+}
+
+func info(args []Value) Value {
+	if len(args) == 0 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'info' command"}
+	}
+
+	command := strings.ToUpper(args[0].bulk)
+
+	switch command {
+	case "REPLICATION":
+		return replicationInfo()
+	}
+
+	return Value{typ: "error", str: "ERR error has occured with the 'config' command"}
+}
+
+func replicationInfo() Value {
+	return Value{typ: "bulk", bulk: "role:master"}
 }
