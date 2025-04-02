@@ -25,6 +25,10 @@ func main() {
 	Config["dir"] = *dir
 	Config["dbfilename"] = *dbfilename
 	Config["port"] = *port
+	if *replicaOf != "" {
+		splitedStr := strings.Split(*replicaOf, " ")
+		*replicaOf = strings.Join(splitedStr, ":")
+	}
 	Config["replicaOf"] = *replicaOf
 	Config["masterID"] = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
 	Config["masterOffset"] = "0"
@@ -50,6 +54,7 @@ func main() {
 			fmt.Println("Failed to bind to port 6379")
 			os.Exit(1)
 		}
+		fmt.Println("Connected on to master")
 
 		conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
 	}
