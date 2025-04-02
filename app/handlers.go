@@ -313,7 +313,15 @@ func ping2() Value {
 	return Value{typ: "array", array: []Value{{typ: "bulk", bulk: "PING"}}}
 }
 
-func replconfwriter(port string) Value {
+func replconfLWriter(port string) Value {
+	return Value{typ: "array", array: []Value{
+		{typ: "bulk", bulk: "REPLCONF"},
+		{typ: "bulk", bulk: "listening-port"},
+		{typ: "bulk", bulk: port},
+	},
+	}
+}
+func replconfCWriter(port string) Value {
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "REPLCONF"},
 		{typ: "bulk", bulk: "listening-port"},
