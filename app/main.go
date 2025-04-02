@@ -26,6 +26,8 @@ func main() {
 	Config["dbfilename"] = *dbfilename
 	Config["port"] = *port
 	Config["replicaOf"] = *replicaOf
+	Config["masterID"] = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+	Config["masterOffset"] = "0"
 	ConfigMu.Unlock()
 
 	dec := NewDecoder(Config["dir"] + "/" + Config["dbfilename"])

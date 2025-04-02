@@ -283,11 +283,20 @@ func info(args []Value) Value {
 }
 
 func replicationInfo() Value {
+	arrVal := Value{typ: "array"}
 	ConfigMu.RLock()
 	defer ConfigMu.RUnlock()
+
+	id := Config["masterID"]
+	offset := Config["masterOffset"]
+
 	if rep := Config["replicaOf"]; rep != "" {
-		return Value{typ: "bulk", bulk: "role:slave"}
+		arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: "role:slave"})
 	} else {
-		return Value{typ: "bulk", bulk: "role:master"}
+		arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: "role:master"})
 	}
+
+	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: "master_replid:" + id})
+	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: "master_repl_offset:" + offset})
+	return arrVal
 }

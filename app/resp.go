@@ -11,15 +11,22 @@ const (
 	STRING  = '+'
 	ERROR   = '-'
 	ARRAY   = '*'
+	MAP     = '%'
 	BULK    = '$'
 	INTEGER = ':'
 )
 
+type MapKVs struct {
+	Key   string
+	Value string
+}
+
 type Value struct {
-	typ   string
-	str   string
-	bulk  string
-	array []Value
+	typ    string
+	maptyp string
+	str    string
+	bulk   string
+	array  []Value
 }
 
 type Resp struct {
@@ -161,6 +168,8 @@ func (v *Value) Marshal() []byte {
 		return v.marshalBulk()
 	case "string":
 		return v.marshalString()
+	case "map":
+		return v.marshallMap()
 	case "null":
 		return v.marshalNull()
 	case "error":
@@ -204,6 +213,21 @@ func (v *Value) marshalError() (bytes []byte) {
 	bytes = append(bytes, ERROR)
 	bytes = append(bytes, v.str...)
 	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v *Value) marshallMap() (bytes []byte) {
+	len := len(v.array)
+	bytes = append(bytes, MAP)
+	bytes = append(bytes, strconv.Itoa(len/2)...)
+	bytes = append(bytes, '\r', '\n')
+
+	for i := 0; i < len; i += 2 {
+		bytes = append(bytes, v.array[i].Marshal()...)
+		bytes = append(bytes, v.array[i+1].Marshal()...)
+	}
+
+	fmt.Println(string(bytes))
 	return bytes
 }
 
