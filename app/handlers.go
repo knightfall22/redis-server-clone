@@ -269,7 +269,7 @@ func keys(args []Value) Value {
 
 func info(args []Value) Value {
 	if len(args) == 0 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'info' command"}
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"}
 	}
 
 	command := strings.ToUpper(args[0].bulk)
