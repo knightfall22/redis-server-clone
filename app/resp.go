@@ -141,22 +141,24 @@ func (r *Resp) readBulk() (Value, error) {
 
 // Writing Resp
 
+// Writer struct wraps bufio.Writer for automatic flushing
 type Writer struct {
 	writer *bufio.Writer
 }
 
+// NewWriter initializes a new Writer with automatic flushing
 func NewWriter(w io.Writer) *Writer {
 	return &Writer{writer: bufio.NewWriter(w)}
 }
 
+// Write marshals and writes data, then flushes immediately
 func (w *Writer) Write(v Value) error {
 	bytes := v.Marshal()
-
 	_, err := w.writer.Write(bytes)
 	if err != nil {
 		return err
 	}
-	return w.writer.Flush()
+	return w.writer.Flush() // Flush after every write
 }
 
 // Convert response to bytes representing the response RESP
@@ -169,7 +171,7 @@ func (v *Value) Marshal() []byte {
 	case "string":
 		return v.marshalString()
 	case "map":
-		return v.marshallMap()
+		return v.marshalMap()
 	case "null":
 		return v.marshalNull()
 	case "error":
@@ -181,7 +183,7 @@ func (v *Value) Marshal() []byte {
 
 func (v *Value) marshalArray() (bytes []byte) {
 	len := len(v.array)
-	bytes = append(bytes, ARRAY)
+	bytes = append(bytes, '*')
 	bytes = append(bytes, strconv.Itoa(len)...)
 	bytes = append(bytes, '\r', '\n')
 
@@ -193,7 +195,7 @@ func (v *Value) marshalArray() (bytes []byte) {
 }
 
 func (v *Value) marshalBulk() (bytes []byte) {
-	bytes = append(bytes, BULK)
+	bytes = append(bytes, '$')
 	bytes = append(bytes, strconv.Itoa(len(v.bulk))...)
 	bytes = append(bytes, '\r', '\n')
 	bytes = append(bytes, v.bulk...)
@@ -202,23 +204,22 @@ func (v *Value) marshalBulk() (bytes []byte) {
 }
 
 func (v *Value) marshalString() (bytes []byte) {
-	bytes = append(bytes, STRING)
+	bytes = append(bytes, '+')
 	bytes = append(bytes, v.str...)
 	bytes = append(bytes, '\r', '\n')
-
 	return bytes
 }
 
 func (v *Value) marshalError() (bytes []byte) {
-	bytes = append(bytes, ERROR)
+	bytes = append(bytes, '-')
 	bytes = append(bytes, v.str...)
 	bytes = append(bytes, '\r', '\n')
 	return bytes
 }
 
-func (v *Value) marshallMap() (bytes []byte) {
+func (v *Value) marshalMap() (bytes []byte) {
 	len := len(v.array)
-	bytes = append(bytes, MAP)
+	bytes = append(bytes, '%')
 	bytes = append(bytes, strconv.Itoa(len/2)...)
 	bytes = append(bytes, '\r', '\n')
 
@@ -231,6 +232,5 @@ func (v *Value) marshallMap() (bytes []byte) {
 }
 
 func (v *Value) marshalNull() []byte {
-	//Default
 	return []byte("$-1\r\n")
 }
