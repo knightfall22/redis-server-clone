@@ -56,6 +56,9 @@ func main() {
 		}
 		fmt.Println("Connected on to master")
 
+		writer := NewWriter(conn)
+		writer.Write(ping2())
+
 		resp := NewResp(conn)
 		value, err := resp.Read()
 		if err != nil {
@@ -77,8 +80,6 @@ func main() {
 		args := value.array[1:]
 
 		fmt.Println(command)
-
-		writer := NewWriter(conn)
 
 		handle, ok := Handlers[command]
 		if !ok {

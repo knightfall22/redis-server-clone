@@ -308,11 +308,10 @@ func replicationInfo() Value {
 //Save commands
 
 var SlaveHandlers = map[string]func([]Value) Value{
-	"PING":     ping2,
 	"REPLCONF": replconf,
 }
 
-func ping2(args []Value) Value {
+func ping2() Value {
 	return Value{typ: "array", array: []Value{{typ: "bulk", bulk: "PING"}}}
 }
 
