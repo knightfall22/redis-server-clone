@@ -56,7 +56,21 @@ func main() {
 		}
 		fmt.Println("Connected on to master")
 
-		conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
+		resp := NewResp(conn)
+		value, err := resp.Read()
+		command := strings.ToUpper(value.array[0].bulk)
+		args := value.array[1:]
+
+		writer := NewWriter(conn)
+
+		handle, ok := Handlers[command]
+		if !ok {
+			fmt.Println("Invalid command: ", command)
+			writer.Write(Value{typ: "string", str: ""})
+		}
+
+		result := handle(args)
+		writer.Write(result)
 	}
 
 	// Uncomment this block to pass the first stage

@@ -302,3 +302,20 @@ func replicationInfo() Value {
 
 	return Value{typ: "bulk", bulk: strOut}
 }
+
+//This is definetely redundant and pointles.
+//The only reason it exist is because of the "*1\r\n$4\r\nPING\r\n" return
+//Save commands
+
+var SlaveHandlers = map[string]func([]Value) Value{
+	"PING":     ping2,
+	"REPLCONF": replconf,
+}
+
+func ping2(args []Value) Value {
+	return Value{typ: "array", array: []Value{{typ: "bulk", bulk: "PING"}}}
+}
+
+func replconf(args []Value) Value {
+	return Value{typ: "string", str: "OK"}
+}
