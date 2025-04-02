@@ -45,11 +45,13 @@ func main() {
 
 	//if slave connect to master
 	if *replicaOf != "" {
-		_, err := net.Dial("tcp", *replicaOf)
+		conn, err := net.Dial("tcp", *replicaOf)
 		if err != nil {
 			fmt.Println("Failed to bind to port 6379")
 			os.Exit(1)
 		}
+
+		conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
 	}
 
 	// Uncomment this block to pass the first stage
