@@ -321,11 +321,11 @@ func replconfLWriter(port string) Value {
 	},
 	}
 }
-func replconfCWriter(port string) Value {
+func replconfCWriter() Value {
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "REPLCONF"},
-		{typ: "bulk", bulk: "listening-port"},
-		{typ: "bulk", bulk: port},
+		{typ: "bulk", bulk: "capa"},
+		{typ: "bulk", bulk: "psync2"},
 	},
 	}
 }

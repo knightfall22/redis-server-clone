@@ -60,6 +60,7 @@ func main() {
 		writer.Write(ping2())
 
 		writer.Write(replconfLWriter(*port))
+		writer.Write(replconfCWriter())
 	}
 
 	// Uncomment this block to pass the first stage
