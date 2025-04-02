@@ -283,7 +283,7 @@ func info(args []Value) Value {
 }
 
 func replicationInfo() Value {
-	arrVal := Value{typ: "array"}
+	arrVal := Value{typ: "mbulk"}
 	ConfigMu.RLock()
 	defer ConfigMu.RUnlock()
 

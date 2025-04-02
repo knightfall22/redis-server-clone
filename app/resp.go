@@ -166,6 +166,8 @@ func (v *Value) Marshal() []byte {
 		return v.marshalArray()
 	case "bulk":
 		return v.marshalBulk()
+	case "mbulk":
+		return v.marshalMBulk()
 	case "string":
 		return v.marshalString()
 	case "map":
@@ -198,6 +200,18 @@ func (v *Value) marshalBulk() (bytes []byte) {
 	bytes = append(bytes, '\r', '\n')
 	bytes = append(bytes, v.bulk...)
 	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v *Value) marshalMBulk() (bytes []byte) {
+	len := len(v.array)
+	// bytes = append(bytes, BULK)
+	// bytes = append(bytes, '\r', '\n')
+
+	for i := 0; i < len; i++ {
+		bytes = append(bytes, v.array[i].Marshal()...)
+	}
+
 	return bytes
 }
 
