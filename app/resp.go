@@ -22,11 +22,12 @@ type MapKVs struct {
 }
 
 type Value struct {
-	typ    string
-	maptyp string
-	str    string
-	bulk   string
-	array  []Value
+	typ      string
+	str      string
+	len      int
+	bulk     string
+	array    []Value
+	contents []byte
 }
 
 type Resp struct {
@@ -170,6 +171,8 @@ func (v *Value) Marshal() []byte {
 		return v.marshalString()
 	case "map":
 		return v.marshallMap()
+	case "file":
+		return v.marshalFile()
 	case "null":
 		return v.marshalNull()
 	case "error":
@@ -227,6 +230,14 @@ func (v *Value) marshallMap() (bytes []byte) {
 		bytes = append(bytes, v.array[i+1].Marshal()...)
 	}
 
+	return bytes
+}
+
+func (v *Value) marshalFile() (bytes []byte) {
+	bytes = append(bytes, BULK)
+	bytes = append(bytes, strconv.Itoa(v.len)...)
+	bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, v.contents...)
 	return bytes
 }
 

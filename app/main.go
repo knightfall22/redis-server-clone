@@ -121,6 +121,12 @@ func main() {
 
 				result := handle(args)
 				writer.Write(result)
+
+				//Todo: refactor probably not the best way to do this
+
+				if command == "PSYNC" {
+					writer.Write(fullsync())
+				}
 			}
 		}(conn)
 	}

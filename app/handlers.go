@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -354,4 +357,32 @@ func psyncWrite() Value {
 		{typ: "bulk", bulk: "?"},
 		{typ: "bulk", bulk: "-1"},
 	}}
+}
+
+// Master replies to replica
+func fullsync() Value {
+	ConfigMu.RLock()
+	defer ConfigMu.RUnlock()
+
+	dir := Config["dir"] + "/" + Config["dbfilename"]
+
+	file, err := os.Open(dir)
+
+	if err != nil {
+		return Value{typ: "error", str: "ERR unable to open rdb file"}
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		return Value{typ: "error", str: "ERR unable to get file stat"}
+	}
+
+	length := stat.Size()
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, file); err != nil {
+		return Value{typ: "error", str: "ERR unable to copy file"}
+	}
+
+	return Value{typ: "file", len: int(length), contents: buf.Bytes()}
 }
