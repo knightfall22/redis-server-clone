@@ -366,6 +366,8 @@ func fullsync() Value {
 
 	dir := Config["dir"] + "/" + Config["dbfilename"]
 
+	fmt.Println(dir)
+
 	file, err := os.Open(dir)
 
 	if err != nil {
