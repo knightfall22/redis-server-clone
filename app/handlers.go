@@ -368,7 +368,7 @@ func fullsync() Value {
 
 	fmt.Println(dir)
 
-	file, err := os.Open(dir)
+	file, err := os.Open("dump.rdb")
 
 	if err != nil {
 		return Value{typ: "error", str: "ERR unable to open rdb file"}
