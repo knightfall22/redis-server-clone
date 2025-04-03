@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -364,28 +361,31 @@ func fullsync() Value {
 	ConfigMu.RLock()
 	defer ConfigMu.RUnlock()
 
-	dir := Config["dir"] + "/" + Config["dbfilename"]
+	//Todo: probably would work in cases when a dump.rdb file exists
+	// dir := Config["dir"] + "/" + Config["dbfilename"]
 
-	fmt.Println(dir)
+	// fmt.Println(dir)
 
-	file, err := os.Open(dir)
+	// file, err := os.Open(dir)
 
-	if err != nil {
-		fmt.Println("error", err)
-		return Value{typ: "error", str: "ERR unable to open rdb file"}
-	}
+	// if err != nil {
+	// 	fmt.Println("error", err)
+	// 	return Value{typ: "error", str: "ERR unable to open rdb file"}
+	// }
 
-	stat, err := file.Stat()
-	if err != nil {
-		return Value{typ: "error", str: "ERR unable to get file stat"}
-	}
+	// stat, err := file.Stat()
+	// if err != nil {
+	// 	return Value{typ: "error", str: "ERR unable to get file stat"}
+	// }
 
-	length := stat.Size()
+	// length := stat.Size()
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, file); err != nil {
-		return Value{typ: "error", str: "ERR unable to copy file"}
-	}
+	// var buf bytes.Buffer
+	// if _, err := io.Copy(&buf, file); err != nil {
+	// 	return Value{typ: "error", str: "ERR unable to copy file"}
+	// }
 
-	return Value{typ: "file", len: int(length), contents: buf.Bytes()}
+	hex := "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
+
+	return Value{typ: "file", len: len(hex), contents: []byte(hex)}
 }

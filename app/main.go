@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -40,7 +41,7 @@ func main() {
 	//when file is found
 	if dec != nil {
 		err := dec.Reader()
-		if err != nil {
+		if err != nil && err != io.EOF {
 			fmt.Println("Err: error has occurred: ", err)
 			os.Exit(1)
 		}
