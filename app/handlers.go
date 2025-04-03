@@ -20,7 +20,7 @@ var Handlers = map[string]func([]Value) Value{
 	"KEYS":     keys,
 	"INFO":     info,
 	"REPLCONF": replconf,
-	"PSYNC":    replconf,
+	"PSYNC":    psync,
 }
 
 type setVal struct {
@@ -305,6 +305,22 @@ func replicationInfo() Value {
 	return Value{typ: "bulk", bulk: strOut}
 }
 
+func psync(args []Value) Value {
+	if len(args) != 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"}
+	}
+
+	ConfigMu.RLock()
+	defer ConfigMu.RUnlock()
+
+	id := Config["masterID"]
+	offset := Config["masterOffset"]
+
+	strOut := fmt.Sprintf("FULLRESYNC %s %s", id, offset)
+
+	return Value{typ: "string", str: strOut}
+}
+
 func replconf(args []Value) Value {
 	fmt.Println("from master")
 	return Value{typ: "string", str: "OK"}
@@ -316,7 +332,6 @@ func ping2() Value {
 }
 
 func replconfLWriter(port string) Value {
-	fmt.Println("Sending First")
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "REPLCONF"},
 		{typ: "bulk", bulk: "listening-port"},
@@ -325,7 +340,6 @@ func replconfLWriter(port string) Value {
 	}
 }
 func replconfCWriter() Value {
-	fmt.Println("Sending Second")
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "REPLCONF"},
 		{typ: "bulk", bulk: "capa"},

@@ -60,6 +60,7 @@ func main() {
 		writer := NewWriter(conn)
 		writer.Write(ping2())
 
+		//Todo: There has to be a better way to do this
 		time.Sleep(time.Second * 1)
 		writer.Write(replconfLWriter(*port))
 		time.Sleep(time.Second * 1)
