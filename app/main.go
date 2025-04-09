@@ -86,6 +86,8 @@ func main() {
 				value, err := resp.Read()
 
 				fmt.Println(value)
+
+				fmt.Println(value)
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
 					return
