@@ -90,10 +90,8 @@ func main() {
 					return
 				}
 
-				fmt.Printf("Value: %#v\n", value)
-
 				if value.typ != "array" {
-					fmt.Printf("Invalid request, expected array %#v\n", value)
+					fmt.Println("Invalid request, expected array")
 					continue
 				}
 
@@ -184,7 +182,7 @@ func main() {
 				//Todo: refactor probably not the best way to do this
 
 				if command == "PSYNC" {
-					writer.Write(fullsync())
+					// writer.Write(fullsync())
 
 					connMu.Lock()
 					connections = append(connections, conn)

@@ -254,7 +254,6 @@ func (v *Value) marshalFile() (bytes []byte) {
 	bytes = append(bytes, strconv.Itoa(v.len)...)
 	bytes = append(bytes, '\r', '\n')
 	bytes = append(bytes, v.contents...)
-	bytes = append(bytes, '\r', '\n')
 	return bytes
 }
 
