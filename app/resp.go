@@ -50,6 +50,8 @@ func (r *Resp) Read() (Value, error) {
 		return r.readArray()
 	case BULK:
 		return r.readBulk()
+	case STRING:
+		return r.readString()
 	default:
 		fmt.Printf("Unknown type: %v", string(_type))
 		return Value{}, nil
@@ -112,6 +114,20 @@ func (r *Resp) readArray() (Value, error) {
 
 		v.array[i] = val
 	}
+	return v, nil
+
+}
+func (r *Resp) readString() (Value, error) {
+	v := Value{}
+	v.typ = "string"
+
+	//read string
+	line, _, err := r.readLine()
+	if err != nil {
+		return v, err
+	}
+
+	v.str = string(line)
 	return v, nil
 }
 

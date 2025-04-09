@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 )
 
 var (
@@ -71,23 +70,17 @@ func main() {
 		writer.Write(ping2())
 
 		//Todo: There has to be a better way to do this
-		time.Sleep(time.Second * 1)
 		writer.Write(replconfLWriter(*port))
 
-		time.Sleep(time.Second * 1)
 		writer.Write(replconfCWriter())
 
-		time.Sleep(time.Second * 1)
 		writer.Write(psyncWrite())
 
 		go func(conn net.Conn) {
+			resp := NewResp(conn)
 			for {
-				resp := NewResp(conn)
 				value, err := resp.Read()
 
-				fmt.Println(value)
-
-				fmt.Println(value)
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
 					return
@@ -138,9 +131,9 @@ func main() {
 
 		go func(conn net.Conn) {
 			defer conn.Close()
+			resp := NewResp(conn)
 			for {
 
-				resp := NewResp(conn)
 				value, err := resp.Read()
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())

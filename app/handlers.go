@@ -350,6 +350,7 @@ func replconfCWriter() Value {
 }
 
 func psyncWrite() Value {
+	fmt.Println("from replica")
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "psync"},
 		{typ: "bulk", bulk: "?"},
