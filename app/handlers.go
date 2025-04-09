@@ -392,5 +392,7 @@ func fullsync() Value {
 		return Value{typ: "error", str: "ERR unableto decode string to []byte"}
 	}
 
-	return Value{typ: "file", len: len(hex), contents: hex}
+	fmt.Println(hex)
+
+	return Value{typ: "bulk", len: len(hex), contents: hex}
 }

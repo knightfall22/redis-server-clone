@@ -90,7 +90,7 @@ func main() {
 					return
 				}
 
-				fmt.Println(value)
+				fmt.Printf("Value: %#v\n", value)
 
 				if value.typ != "array" {
 					fmt.Printf("Invalid request, expected array %#v\n", value)
