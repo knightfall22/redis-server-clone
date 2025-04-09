@@ -184,6 +184,9 @@ func main() {
 				if command == "PSYNC" {
 					writer.Write(fullsync())
 
+					v := fullsync()
+					fmt.Println(string(v.Marshal()))
+
 					connMu.Lock()
 					connections = append(connections, conn)
 					connMu.Unlock()
