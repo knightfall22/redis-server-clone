@@ -150,6 +150,15 @@ func (r *Resp) readBulk() (Value, error) {
 
 	v.bulk = string(bulk)
 
+	next, err := r.reader.Peek(1)
+	if err != nil {
+		return v, err
+	}
+
+	// could not be a bulk
+	if next[0] != '\r' {
+		return v, nil
+	}
 	// Read the trailing CRLF
 	r.readLine()
 
