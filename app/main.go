@@ -90,6 +90,8 @@ func main() {
 					return
 				}
 
+				fmt.Println(value)
+
 				if value.typ != "array" {
 					fmt.Println("Invalid request, expected array")
 					continue
