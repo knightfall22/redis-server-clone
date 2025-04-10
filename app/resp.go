@@ -155,8 +155,8 @@ func (r *Resp) readBulk() (Value, error) {
 		return v, err
 	}
 
-	fmt.Println("Next 1", next[0])
-	fmt.Println("Next 2", next[1])
+	fmt.Println("Next 1", string(next[0]))
+	fmt.Println("Next 2", string(next[1]))
 
 	// fmt.Println(v.bulk)
 	// // could not be a bulk
