@@ -113,12 +113,12 @@ func main() {
 					continue
 				}
 
-				handle(args)
+				val := handle(args)
 				writer := NewWriter(conn)
 
-				// if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
-				// 	writer.Write(val)
-				// }
+				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
+					writer.Write(val)
+				}
 
 				valCopy := value
 				valcount := len(valCopy.Marshal())
@@ -188,7 +188,7 @@ func main() {
 				}
 
 				if command == "WAIT" {
-					ack := writeAck()
+					ack := writeGetAck()
 					multi := io.MultiWriter(connections...)
 					_, err = multi.Write(ack.Marshal())
 
