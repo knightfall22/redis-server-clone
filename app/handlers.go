@@ -22,7 +22,7 @@ var Handlers = map[string]func([]Value) Value{
 	"INFO":     info,
 	"REPLCONF": replconf,
 	"PSYNC":    psync,
-	"WAIT":     wait,
+	// "WAIT":     wait,
 }
 
 type setVal struct {
@@ -337,23 +337,19 @@ func replconf(args []Value) Value {
 			{typ: "bulk", bulk: "ACK"},
 			{typ: "bulk", bulk: strconv.Itoa(offset)},
 		}}
-	case "ACK":
-		if Config["role"] == "master" {
-			acksChan <- true
-		}
-		return Value{typ: "string", str: "OK"}
+
 	default:
 		return Value{typ: "string", str: "OK"}
 	}
 }
 
-func wait(args []Value) Value {
-	if len(args) < 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
-	}
+// func wait(args []Value) Value {
+// 	if len(args) < 2 {
+// 		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
+// 	}
 
-	return Value{typ: "integer", integer: len(connections)}
-}
+// 	return Value{typ: "integer", integer: len(connections)}
+// }
 
 // Slave commands
 func ping2() Value {
