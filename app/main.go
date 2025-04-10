@@ -200,6 +200,7 @@ func main() {
 					}
 
 					go func(conn net.Conn) {
+						fmt.Println("Hello from wait routine")
 						resp := NewResp(conn)
 						//initialize reader
 						for i := 0; i < len(connections); i++ {
