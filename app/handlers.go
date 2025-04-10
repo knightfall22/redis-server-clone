@@ -337,6 +337,11 @@ func replconf(args []Value) Value {
 			{typ: "bulk", bulk: "ACK"},
 			{typ: "bulk", bulk: strconv.Itoa(offset)},
 		}}
+	case "ACK":
+		if Config["role"] == "master" {
+			acksChan <- true
+		}
+		return Value{typ: "string", str: "OK"}
 	default:
 		return Value{typ: "string", str: "OK"}
 	}

@@ -22,14 +22,17 @@ var (
 	offsetMu sync.Mutex
 )
 
+var acksChan chan bool
+
 func main() {
-	ackChan := make(chan bool)
+
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
 	//Flags to accept the configs
 	dir := flag.String("dir", ".", "Directory containing db file")
 	dbfilename := flag.String("dbfilename", "dump.rdb", "Database file")
+	role := flag.String("role", "master", "Master or slave")
 	port := flag.String("port", "6379", "Port number")
 	replicaOf := flag.String("replicaof", "", "set has replica of a master")
 
@@ -45,6 +48,7 @@ func main() {
 		*replicaOf = strings.Join(splitedStr, ":")
 	}
 	Config["replicaOf"] = *replicaOf
+	Config["role"] = *role
 	Config["masterID"] = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
 	Config["masterOffset"] = "0"
 	ConfigMu.Unlock()
@@ -64,6 +68,10 @@ func main() {
 
 	//if slave connect to master
 	if *replicaOf != "" {
+		ConfigMu.Lock()
+		Config["role"] = "slave"
+		ConfigMu.Unlock()
+
 		conn, err := net.Dial("tcp", *replicaOf)
 		if err != nil {
 			fmt.Println("Failed to bind to port ", *replicaOf)
@@ -199,22 +207,6 @@ func main() {
 						return
 					}
 
-					go func(conn net.Conn) {
-						fmt.Println("Hello from wait routine")
-						resp := NewResp(conn)
-						//initialize reader
-						for i := 0; i < len(connections); i++ {
-							value, err := resp.Read()
-							if err != nil {
-								fmt.Println("Error reading from connection", err.Error())
-								return
-							}
-
-							fmt.Println("From wait routine", value)
-							ackChan <- true
-						}
-					}(conn)
-
 					desired, _ := strconv.Atoi(args[0].bulk)
 					t, _ := strconv.Atoi(args[1].bulk)
 
@@ -222,8 +214,9 @@ func main() {
 					var acks int
 				loop:
 					for {
+						fmt.Println("I keep going")
 						select {
-						case <-ackChan:
+						case <-acksChan:
 							if acks == desired {
 								break loop
 							}
@@ -237,6 +230,8 @@ func main() {
 					fmt.Println(acks)
 					result := Value{typ: "integer", integer: acks}
 					writer.Write(result)
+
+					continue
 				}
 
 				handle, ok := Handlers[command]
