@@ -84,13 +84,9 @@ func main() {
 			resp := NewResp(conn)
 
 			for {
-				buf := make([]byte, 1024)
-				copyConn := conn
-				n, _ := copyConn.Read(buf)
-
-				fmt.Println(string(buf[:n]))
-
 				value, err := resp.Read()
+
+				fmt.Printf("Value %#v\n", value)
 
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
