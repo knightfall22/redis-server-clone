@@ -389,6 +389,14 @@ func writeAck() Value {
 	}}
 }
 
+func writeGetAck() Value {
+	return Value{typ: "array", array: []Value{
+		{typ: "bulk", bulk: "REPLCONF"},
+		{typ: "bulk", bulk: "GETACK"},
+		{typ: "bulk", bulk: "*"},
+	}}
+}
+
 // Master replies to replica
 func fullsync() Value {
 	ConfigMu.RLock()
