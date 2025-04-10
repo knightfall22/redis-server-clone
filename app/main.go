@@ -85,6 +85,8 @@ func main() {
 			for {
 				value, err := resp.Read()
 
+				fmt.Printf("Value %#v\n", value)
+
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
 					return
@@ -182,7 +184,7 @@ func main() {
 				//Todo: refactor probably not the best way to do this
 
 				if command == "PSYNC" {
-					// writer.Write(fullsync())
+					writer.Write(fullsync())
 
 					connMu.Lock()
 					connections = append(connections, conn)

@@ -10,18 +10,18 @@ import (
 )
 
 var Handlers = map[string]func([]Value) Value{
-	"PING":    ping,
-	"SET":     set,
-	"GET":     get,
-	"HSET":    hset,
-	"HGET":    hget,
-	"HGETALL": hgetall,
-	"ECHO":    echo,
-	"CONFIG":  config,
-	"KEYS":    keys,
-	"INFO":    info,
-	// "REPLCONF": replconf,
-	"PSYNC": psync,
+	"PING":     ping,
+	"SET":      set,
+	"GET":      get,
+	"HSET":     hset,
+	"HGET":     hget,
+	"HGETALL":  hgetall,
+	"ECHO":     echo,
+	"CONFIG":   config,
+	"KEYS":     keys,
+	"INFO":     info,
+	"REPLCONF": replconf,
+	"PSYNC":    psync,
 }
 
 type setVal struct {
@@ -391,8 +391,6 @@ func fullsync() Value {
 	if err != nil {
 		return Value{typ: "error", str: "ERR unableto decode string to []byte"}
 	}
-
-	fmt.Println(hex)
 
 	return Value{typ: "file", len: len(hex), contents: hex}
 }
