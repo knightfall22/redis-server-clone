@@ -22,6 +22,7 @@ var Handlers = map[string]func([]Value) Value{
 	"INFO":     info,
 	"REPLCONF": replconf,
 	"PSYNC":    psync,
+	"WAIT":     wait,
 }
 
 type setVal struct {
@@ -339,6 +340,14 @@ func replconf(args []Value) Value {
 	default:
 		return Value{typ: "string", str: "OK"}
 	}
+}
+
+func wait(args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
+	}
+
+	return Value{typ: "integer", integer: 0}
 }
 
 // Slave commands

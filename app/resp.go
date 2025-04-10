@@ -24,6 +24,7 @@ type MapKVs struct {
 type Value struct {
 	typ      string
 	str      string
+	integer  int
 	len      int
 	bulk     string
 	array    []Value
@@ -196,6 +197,8 @@ func (v *Value) Marshal() []byte {
 		return v.marshalString()
 	case "map":
 		return v.marshallMap()
+	case "integer":
+		return v.marshallInteger()
 	case "file":
 		return v.marshalFile()
 	case "null":
@@ -263,6 +266,13 @@ func (v *Value) marshalFile() (bytes []byte) {
 	bytes = append(bytes, strconv.Itoa(v.len)...)
 	bytes = append(bytes, '\r', '\n')
 	bytes = append(bytes, v.contents...)
+	return bytes
+}
+
+func (v *Value) marshallInteger() (bytes []byte) {
+	bytes = append(bytes, INTEGER)
+	bytes = append(bytes, strconv.Itoa(v.integer)...)
+	bytes = append(bytes, '\r', '\n')
 	return bytes
 }
 
