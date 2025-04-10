@@ -110,6 +110,9 @@ func main() {
 				command := strings.ToUpper(value.array[0].bulk)
 				args := value.array[1:]
 
+				fmt.Println("Command: ", command)
+				fmt.Println("Args: ", args)
+
 				handle, ok := Handlers[command]
 				if !ok {
 					fmt.Println("Invalid command: ", command)
