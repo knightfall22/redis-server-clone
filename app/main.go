@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ var (
 )
 
 func main() {
+	ackChan := make(chan bool)
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
@@ -188,6 +190,7 @@ func main() {
 				}
 
 				if command == "WAIT" {
+					//propagate the get acks
 					ack := writeGetAck()
 					multi := io.MultiWriter(connections...)
 					_, err = multi.Write(ack.Marshal())
@@ -195,6 +198,42 @@ func main() {
 					if err != nil {
 						return
 					}
+
+					go func(conn net.Conn) {
+						resp := NewResp(conn)
+						//initialize reader
+						for i := 0; i < len(connections); i++ {
+							_, err := resp.Read()
+							if err != nil {
+								fmt.Println("Error reading from connection", err.Error())
+								return
+							}
+
+							ackChan <- true
+						}
+					}(conn)
+
+					desired, _ := strconv.Atoi(args[0].bulk)
+					t, _ := strconv.Atoi(args[1].bulk)
+
+					timer := time.After(time.Duration(t) * time.Millisecond)
+					var acks int
+				loop:
+					for {
+						select {
+						case <-ackChan:
+							if acks == desired {
+								break loop
+							}
+							acks++
+						case <-timer:
+							break loop
+
+						}
+					}
+
+					result := Value{typ: "integer", integer: acks}
+					writer.Write(result)
 				}
 
 				handle, ok := Handlers[command]
