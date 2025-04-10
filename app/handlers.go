@@ -22,7 +22,7 @@ var Handlers = map[string]func([]Value) Value{
 	"INFO":     info,
 	"REPLCONF": replconf,
 	"PSYNC":    psync,
-	// "WAIT":     wait,
+	"WAIT":     wait,
 }
 
 type setVal struct {
@@ -305,6 +305,14 @@ func replicationInfo() Value {
 	strOut += fmt.Sprintf("master_repl_offset:%s", offset)
 
 	return Value{typ: "bulk", bulk: strOut}
+}
+
+func wait(args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
+	}
+
+	return Value{typ: "integer", integer: len(connections)}
 }
 
 func psync(args []Value) Value {
