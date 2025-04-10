@@ -16,6 +16,11 @@ var (
 	connMu      sync.Mutex
 )
 
+var (
+	offset   = 0
+	offsetMu sync.Mutex
+)
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -99,6 +104,12 @@ func main() {
 					fmt.Println("Invalid request, expected array length > 0")
 					continue
 				}
+
+				valCopy := value
+				valcount := len(valCopy.Marshal())
+				offsetMu.Lock()
+				offset += valcount
+				offsetMu.Unlock()
 
 				command := strings.ToUpper(value.array[0].bulk)
 				args := value.array[1:]

@@ -334,7 +334,7 @@ func replconf(args []Value) Value {
 		return Value{typ: "array", array: []Value{
 			{typ: "bulk", bulk: "REPLCONF"},
 			{typ: "bulk", bulk: "ACK"},
-			{typ: "bulk", bulk: "0"},
+			{typ: "bulk", bulk: strconv.Itoa(offset)},
 		}}
 	default:
 		return Value{typ: "string", str: "OK"}
