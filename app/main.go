@@ -113,12 +113,12 @@ func main() {
 					continue
 				}
 
-				val := handle(args)
+				handle(args)
 				writer := NewWriter(conn)
 
-				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
-					writer.Write(val)
-				}
+				// if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
+				// 	writer.Write(val)
+				// }
 
 				valCopy := value
 				valcount := len(valCopy.Marshal())
