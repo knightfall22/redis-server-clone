@@ -217,6 +217,7 @@ func main() {
 						}
 					}
 
+					fmt.Println(ackBoi)
 					writer.Write(Value{typ: "integer", integer: ackBoi})
 					continue
 				}
