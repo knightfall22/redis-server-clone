@@ -105,6 +105,8 @@ func main() {
 					continue
 				}
 
+				fmt.Println(value)
+
 				valCopy := value
 				valcount := len(valCopy.Marshal())
 				offsetMu.Lock()
