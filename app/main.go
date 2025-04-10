@@ -216,6 +216,9 @@ func main() {
 							break loop
 						}
 					}
+
+					writer.Write(Value{typ: "integer", integer: ackBoi})
+					continue
 				}
 
 				handle, ok := Handlers[command]
