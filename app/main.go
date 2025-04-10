@@ -107,12 +107,6 @@ func main() {
 
 				fmt.Println(value)
 
-				valCopy := value
-				valcount := len(valCopy.Marshal())
-				offsetMu.Lock()
-				offset += valcount
-				offsetMu.Unlock()
-
 				command := strings.ToUpper(value.array[0].bulk)
 				args := value.array[1:]
 
@@ -129,6 +123,12 @@ func main() {
 					writer := NewWriter(conn)
 					writer.Write(val)
 				}
+
+				valCopy := value
+				valcount := len(valCopy.Marshal())
+				offsetMu.Lock()
+				offset += valcount
+				offsetMu.Unlock()
 			}
 		}(conn)
 
