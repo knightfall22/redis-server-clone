@@ -155,11 +155,14 @@ func (r *Resp) readBulk() (Value, error) {
 		return v, err
 	}
 
-	fmt.Println(v.bulk)
-	// could not be a bulk
-	if next[0] != '\r' && next[1] != '\n' {
-		fmt.Println(true)
-	}
+	fmt.Println("Next 1", next[0])
+	fmt.Println("Next 2", next[1])
+
+	// fmt.Println(v.bulk)
+	// // could not be a bulk
+	// if next[0] != '\r' && next[1] != '\n' {
+	// 	fmt.Println(true)
+	// }
 	// Read the trailing CRLF
 	r.readLine()
 
