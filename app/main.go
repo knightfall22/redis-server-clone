@@ -187,16 +187,6 @@ func main() {
 					}
 				}
 
-				if command == "WAIT" {
-					acks := writeAck()
-					multi := io.MultiWriter(connections...)
-					_, err = multi.Write(acks.Marshal())
-
-					if err != nil {
-						return
-					}
-				}
-
 				handle, ok := Handlers[command]
 				if !ok {
 					fmt.Println("Invalid command: ", command)
