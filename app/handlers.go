@@ -338,6 +338,9 @@ func replconf(args []Value) Value {
 			{typ: "bulk", bulk: strconv.Itoa(offset)},
 		}}
 
+	case "ACK":
+		chanChan <- true
+		return Value{typ: "string", str: "OK"}
 	default:
 		return Value{typ: "string", str: "OK"}
 	}

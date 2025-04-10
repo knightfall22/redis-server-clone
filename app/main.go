@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,8 @@ var (
 	offset   = 0
 	offsetMu sync.Mutex
 )
+
+var chanChan chan bool
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -184,6 +187,34 @@ func main() {
 
 					if err != nil {
 						return
+					}
+				}
+
+				if command == "WAIT" {
+					acks := writeGetAck()
+					multi := io.MultiWriter(connections...)
+					_, err = multi.Write(acks.Marshal())
+
+					if err != nil {
+						return
+					}
+
+					desired, _ := strconv.Atoi(args[0].bulk)
+					t, _ := strconv.Atoi(args[1].bulk)
+
+					timer := time.After(time.Duration(t) * time.Millisecond)
+					var ackBoi int
+				loop:
+					for {
+						select {
+						case <-chanChan:
+							if ackBoi == desired {
+								break loop
+							}
+							ackBoi++
+						case <-timer:
+							break loop
+						}
 					}
 				}
 
