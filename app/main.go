@@ -135,9 +135,9 @@ func main() {
 
 		go func(conn net.Conn) {
 			defer conn.Close()
+			resp := NewResp(conn)
 			for {
 
-				resp := NewResp(conn)
 				value, err := resp.Read()
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
@@ -183,8 +183,6 @@ func main() {
 
 				if command == "PSYNC" {
 					writer.Write(fullsync())
-
-					time.Sleep(time.Second * 1)
 
 					connMu.Lock()
 					connections = append(connections, conn)
