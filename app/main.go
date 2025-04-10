@@ -203,12 +203,13 @@ func main() {
 						resp := NewResp(conn)
 						//initialize reader
 						for i := 0; i < len(connections); i++ {
-							_, err := resp.Read()
+							value, err := resp.Read()
 							if err != nil {
 								fmt.Println("Error reading from connection", err.Error())
 								return
 							}
 
+							fmt.Println("From wait routine", value)
 							ackChan <- true
 						}
 					}(conn)
