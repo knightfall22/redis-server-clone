@@ -105,8 +105,6 @@ func main() {
 					continue
 				}
 
-				fmt.Println(value)
-
 				command := strings.ToUpper(value.array[0].bulk)
 				args := value.array[1:]
 
@@ -122,7 +120,7 @@ func main() {
 
 				val := handle(args)
 
-				if strings.ToUpper(args[0].bulk) == "GETACK" {
+				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
 					writer := NewWriter(conn)
 					writer.Write(val)
 				}
