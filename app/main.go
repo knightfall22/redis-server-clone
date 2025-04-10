@@ -81,14 +81,14 @@ func main() {
 		writer.Write(psyncWrite())
 
 		go func(conn net.Conn) {
-			buf := make([]byte, 1024)
-			copyConn := conn
-			n, _ := copyConn.Read(buf)
-
-			fmt.Println(string(buf[:n]))
 			resp := NewResp(conn)
 
 			for {
+				buf := make([]byte, 1024)
+				copyConn := conn
+				n, _ := copyConn.Read(buf)
+
+				fmt.Println(string(buf[:n]))
 
 				value, err := resp.Read()
 
