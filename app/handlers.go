@@ -381,6 +381,14 @@ func psyncWrite() Value {
 	}}
 }
 
+func writeAck() Value {
+	return Value{typ: "array", array: []Value{
+		{typ: "bulk", bulk: "REPLCONF"},
+		{typ: "bulk", bulk: "ACK"},
+		{typ: "bulk", bulk: strconv.Itoa(offset)},
+	}}
+}
+
 // Master replies to replica
 func fullsync() Value {
 	ConfigMu.RLock()

@@ -33,8 +33,6 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Println("Port:", *port)
-
 	//Configuration setup
 	ConfigMu.Lock()
 	Config["dir"] = *dir
@@ -108,9 +106,6 @@ func main() {
 				command := strings.ToUpper(value.array[0].bulk)
 				args := value.array[1:]
 
-				fmt.Println("Command: ", command)
-				fmt.Println("Args: ", args)
-
 				handle, ok := Handlers[command]
 				if !ok {
 					fmt.Println("Invalid command: ", command)
@@ -119,9 +114,9 @@ func main() {
 				}
 
 				val := handle(args)
+				writer := NewWriter(conn)
 
 				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
-					writer := NewWriter(conn)
 					writer.Write(val)
 				}
 
@@ -130,6 +125,8 @@ func main() {
 				offsetMu.Lock()
 				offset += valcount
 				offsetMu.Unlock()
+
+				writer.Write(writeAck())
 			}
 		}(conn)
 
@@ -158,6 +155,8 @@ func main() {
 			for {
 
 				value, err := resp.Read()
+
+				fmt.Println(value)
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
 					return
