@@ -85,7 +85,6 @@ func main() {
 
 			for {
 				value, err := resp.Read()
-
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
 					return
@@ -111,7 +110,12 @@ func main() {
 					continue
 				}
 
-				handle(args)
+				val := handle(args)
+
+				if strings.ToUpper(args[0].bulk) == "GETACK" {
+					writer := NewWriter(conn)
+					writer.Write(val)
+				}
 			}
 		}(conn)
 

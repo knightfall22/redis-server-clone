@@ -323,8 +323,22 @@ func psync(args []Value) Value {
 }
 
 func replconf(args []Value) Value {
-	fmt.Println("from master")
-	return Value{typ: "string", str: "OK"}
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'replconf' command"}
+	}
+
+	command := strings.ToUpper(args[0].bulk)
+
+	switch command {
+	case "GETACK":
+		return Value{typ: "array", array: []Value{
+			{typ: "bulk", bulk: "REPLCONF"},
+			{typ: "bulk", bulk: "ACK"},
+			{typ: "bulk", bulk: "0"},
+		}}
+	default:
+		return Value{typ: "string", str: "OK"}
+	}
 }
 
 // Slave commands
