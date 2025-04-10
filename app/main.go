@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +22,6 @@ var (
 )
 
 func main() {
-	ackChan := make(chan bool)
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
@@ -179,15 +177,6 @@ func main() {
 
 				writer := NewWriter(conn)
 
-				//Todo: refactor probably not the best way to do this
-				if command == "PSYNC" {
-					writer.Write(fullsync())
-
-					connMu.Lock()
-					connections = append(connections, conn)
-					connMu.Unlock()
-				}
-
 				//Test propagation
 				if command == "SET" {
 					multi := io.MultiWriter(connections...)
@@ -198,62 +187,6 @@ func main() {
 					}
 				}
 
-				if command == "WAIT" {
-					//propagate the get acks
-					ack := writeGetAck()
-					multi := io.MultiWriter(connections...)
-					_, err = multi.Write(ack.Marshal())
-
-					if err != nil {
-						return
-					}
-
-					go func(conn net.Conn) {
-						fmt.Println("Hello from wait routine")
-						resp := NewResp(conn)
-						//initialize reader
-						for i := 0; i < len(connections); i++ {
-							v, err := resp.Read()
-							if err != nil {
-								fmt.Println("Error reading from connection", err.Error())
-								return
-							}
-
-							fmt.Println("From wait routine", v)
-							ackChan <- true
-						}
-					}(conn)
-
-					desired, _ := strconv.Atoi(args[0].bulk)
-					t, _ := strconv.Atoi(args[1].bulk)
-
-					timer := time.After(time.Duration(t) * time.Millisecond)
-					var acks int
-				loop:
-					for {
-						fmt.Println("I keep going")
-						select {
-						case <-ackChan:
-							if acks == desired {
-								break loop
-							}
-							acks++
-							continue
-						case <-timer:
-							break loop
-
-						}
-					}
-
-					fmt.Println(acks)
-					result := Value{typ: "integer", integer: acks}
-					writer.Write(result)
-
-					continue
-				}
-
-				fmt.Println(command)
-
 				handle, ok := Handlers[command]
 				if !ok {
 					fmt.Println("Invalid command: ", command)
@@ -263,6 +196,16 @@ func main() {
 
 				result := handle(args)
 				writer.Write(result)
+
+				//Todo: refactor probably not the best way to do this
+
+				if command == "PSYNC" {
+					writer.Write(fullsync())
+
+					connMu.Lock()
+					connections = append(connections, conn)
+					connMu.Unlock()
+				}
 
 			}
 		}(conn)
