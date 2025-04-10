@@ -153,8 +153,8 @@ func main() {
 
 		go func(conn net.Conn) {
 			defer conn.Close()
+			resp := NewResp(conn)
 			for {
-				resp := NewResp(conn)
 
 				value, err := resp.Read()
 
