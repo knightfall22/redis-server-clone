@@ -155,14 +155,10 @@ func (r *Resp) readBulk() (Value, error) {
 		return v, err
 	}
 
-	fmt.Println("Next 1", string(next[0]))
-	fmt.Println("Next 2", string(next[1]))
-
-	// fmt.Println(v.bulk)
-	// // could not be a bulk
-	// if next[0] != '\r' && next[1] != '\n' {
-	// 	fmt.Println(true)
-	// }
+	// could not be a bulk
+	if next[0] != '\r' && next[1] != '\n' {
+		return v, nil
+	}
 	// Read the trailing CRLF
 	r.readLine()
 
@@ -265,7 +261,7 @@ func (v *Value) marshallMap() (bytes []byte) {
 func (v *Value) marshalFile() (bytes []byte) {
 	bytes = append(bytes, BULK)
 	bytes = append(bytes, strconv.Itoa(v.len)...)
-	// bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, '\r', '\n')
 	bytes = append(bytes, v.contents...)
 	return bytes
 }

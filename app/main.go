@@ -81,11 +81,16 @@ func main() {
 		writer.Write(psyncWrite())
 
 		go func(conn net.Conn) {
-			resp := NewResp(conn)
-			for {
-				value, err := resp.Read()
+			buf := make([]byte, 1024)
+			copyConn := conn
+			n, _ := copyConn.Read(buf)
 
-				fmt.Printf("Value %#v\n", value)
+			fmt.Println(string(buf[:n]))
+			resp := NewResp(conn)
+
+			for {
+
+				value, err := resp.Read()
 
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
