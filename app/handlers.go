@@ -347,7 +347,7 @@ func wait(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
 	}
 
-	return Value{typ: "integer", integer: 0}
+	return Value{typ: "integer", integer: len(connections)}
 }
 
 // Slave commands
