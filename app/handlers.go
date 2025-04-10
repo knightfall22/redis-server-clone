@@ -394,5 +394,5 @@ func fullsync() Value {
 
 	fmt.Println(hex)
 
-	return Value{typ: "bulk", len: len(hex), contents: hex}
+	return Value{typ: "file", len: len(hex), contents: hex}
 }
