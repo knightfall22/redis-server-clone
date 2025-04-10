@@ -232,6 +232,7 @@ func main() {
 						}
 					}
 
+					fmt.Println(acks)
 					result := Value{typ: "integer", integer: acks}
 					writer.Write(result)
 				}
