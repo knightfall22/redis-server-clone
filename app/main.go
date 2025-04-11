@@ -66,6 +66,7 @@ func main() {
 
 	//if slave connect to master
 	if *replicaOf != "" {
+		fmt.Println("hello")
 		conn, err := net.Dial("tcp", *replicaOf)
 		if err != nil {
 			fmt.Println("Failed to bind to port ", *replicaOf)
@@ -196,7 +197,7 @@ func main() {
 
 				//Test propagation
 				if command == "SET" {
-					fmt.Println("O borther what art thou propagating: %v\n", value)
+					fmt.Printf("O borther what art thou propagating: %v\n", value)
 					multi := io.MultiWriter(connections...)
 					_, err = multi.Write(value.Marshal())
 
