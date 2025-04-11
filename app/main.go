@@ -191,8 +191,6 @@ func main() {
 						return
 					}
 
-					store = append(store, struct{}{})
-
 				}
 
 				if command == "WAIT" && len(store) <= 0 {

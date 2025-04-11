@@ -157,6 +157,10 @@ func set(args []Value) Value {
 	SETs[key] = value
 	SETsMu.Unlock()
 
+	store = append(store, struct{}{})
+
+	fmt.Println(store)
+
 	return Value{typ: "string", str: "OK"}
 }
 
