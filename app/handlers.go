@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"sync"
@@ -316,7 +317,38 @@ func wait(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
 	}
 
-	return Value{typ: "integer", integer: len(connections)}
+	if len(store) <= 0 {
+		return Value{typ: "integer", integer: len(connections)}
+	}
+
+	acks := writeGetAck()
+	multi := io.MultiWriter(connections...)
+	_, err := multi.Write(acks.Marshal())
+	if err != nil {
+		return Value{typ: "error", str: "ERR " + err.Error()}
+	}
+
+	desired, _ := strconv.Atoi(args[0].bulk)
+	t, _ := strconv.Atoi(args[1].bulk)
+
+	timer := time.After(time.Duration(t) * time.Millisecond)
+	var ackBoi int
+loop:
+	for {
+		select {
+		case <-chanChan:
+			ackBoi++
+			if ackBoi == desired {
+				break loop
+			}
+			fmt.Println("This si", ackBoi)
+		case <-timer:
+			break loop
+		}
+	}
+
+	fmt.Println(ackBoi)
+	return Value{typ: "integer", integer: ackBoi}
 }
 
 func psync(args []Value) Value {
