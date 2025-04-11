@@ -389,7 +389,7 @@ func replconf(args []Value) Value {
 
 	case "ACK":
 		chanChan <- true
-		// fmt.Println("hello angel")
+		fmt.Println("hello angel")
 		return Value{typ: "string", str: "OK"}
 	default:
 		return Value{typ: "string", str: "OK"}
