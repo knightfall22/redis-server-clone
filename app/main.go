@@ -194,6 +194,8 @@ func main() {
 					offsetMu.Lock()
 					offset += valcount
 					offsetMu.Unlock()
+
+					fmt.Println("master offeset", offset)
 				}
 
 				if command == "WAIT" && offset != 0 {
