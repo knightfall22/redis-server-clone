@@ -129,7 +129,7 @@ func main() {
 				offset += valcount
 				offsetMu.Unlock()
 
-				// writer.Write(writeAck())
+				writer.Write(writeAck())
 			}
 		}(conn)
 
