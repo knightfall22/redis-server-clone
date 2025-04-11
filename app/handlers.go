@@ -322,6 +322,8 @@ func wait(args []Value) Value {
 		return Value{typ: "integer", integer: len(connections)}
 	}
 
+	fmt.Println("Who are you to tell my what I can or can't be")
+
 	acks := writeGetAck()
 	multi := io.MultiWriter(connections...)
 	_, err := multi.Write(acks.Marshal())
