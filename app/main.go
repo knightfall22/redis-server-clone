@@ -129,7 +129,7 @@ func main() {
 				offset += valcount
 				offsetMu.Unlock()
 
-				writer.Write(writeAck())
+				// writer.Write(writeAck())
 			}
 		}(conn)
 
@@ -207,12 +207,11 @@ func main() {
 				loop:
 					for {
 						select {
-						case res := <-chanChan:
-							fmt.Println(res)
+						case <-chanChan:
+							ackBoi++
 							if ackBoi == desired {
 								break loop
 							}
-							ackBoi++
 						case <-timer:
 							break loop
 						}
