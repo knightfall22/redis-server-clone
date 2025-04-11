@@ -24,6 +24,8 @@ var (
 
 var chanChan = make(chan bool, 1)
 
+var store []struct{}
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -189,16 +191,11 @@ func main() {
 						return
 					}
 
-					valCopy := value
-					valcount := len(valCopy.Marshal())
-					offsetMu.Lock()
-					offset += valcount
-					offsetMu.Unlock()
+					store = append(store, struct{}{})
 
-					fmt.Println("master offeset", offset)
 				}
 
-				if command == "WAIT" && offset != 0 {
+				if command == "WAIT" && len(store) <= 0 {
 					acks := writeGetAck()
 					multi := io.MultiWriter(connections...)
 					_, err = multi.Write(acks.Marshal())
