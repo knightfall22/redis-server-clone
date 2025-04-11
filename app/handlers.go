@@ -322,7 +322,7 @@ func wait(args []Value) Value {
 		return Value{typ: "integer", integer: len(connections)}
 	}
 
-	fmt.Println("Who are you to tell my what I can or can't be")
+	fmt.Println("Who are you to tell me what I can or can't be")
 
 	acks := writeGetAck()
 	multi := io.MultiWriter(connections...)
@@ -336,6 +336,8 @@ func wait(args []Value) Value {
 
 	timer := time.After(time.Duration(t) * time.Millisecond)
 	var ackBoi int
+
+	fmt.Printf("the number doth haunt my dreams: (%d) (%d)\n", desired, t)
 loop:
 	for {
 		select {
