@@ -196,6 +196,7 @@ func main() {
 
 				//Test propagation
 				if command == "SET" {
+					fmt.Println("O borther what art thou propagating: %v\n", value)
 					multi := io.MultiWriter(connections...)
 					_, err = multi.Write(value.Marshal())
 
