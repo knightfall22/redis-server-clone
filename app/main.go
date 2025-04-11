@@ -207,7 +207,8 @@ func main() {
 				loop:
 					for {
 						select {
-						case <-chanChan:
+						case res := <-chanChan:
+							fmt.Println(res)
 							if ackBoi == desired {
 								break loop
 							}
