@@ -131,7 +131,7 @@ func main() {
 				offset += valcount
 				offsetMu.Unlock()
 
-				writer.Write(writeAck())
+				// writer.Write(writeAck())
 			}
 		}(conn)
 
@@ -194,7 +194,7 @@ func main() {
 				}
 
 				if command == "WAIT" && len(store) <= 0 {
-					fmt.Println("See me please")
+					fmt.Println("See")
 					acks := writeGetAck()
 					multi := io.MultiWriter(connections...)
 					_, err = multi.Write(acks.Marshal())
