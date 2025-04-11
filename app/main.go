@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -122,13 +123,16 @@ func main() {
 					writer.Write(val)
 				}
 
+				if offset == 0 {
+					writer.Write(writeAck())
+				}
+
 				valCopy := value
 				valcount := len(valCopy.Marshal())
 				offsetMu.Lock()
 				offset += valcount
 				offsetMu.Unlock()
 
-				writer.Write(writeAck())
 			}
 		}(conn)
 
@@ -197,37 +201,37 @@ func main() {
 					fmt.Println("master offeset", offset)
 				}
 
-				// if command == "WAIT" && offset != 0 {
-				// 	acks := writeGetAck()
-				// 	multi := io.MultiWriter(connections...)
-				// 	_, err = multi.Write(acks.Marshal())
+				if command == "WAIT" && offset != 0 {
+					acks := writeGetAck()
+					multi := io.MultiWriter(connections...)
+					_, err = multi.Write(acks.Marshal())
 
-				// 	if err != nil {
-				// 		return
-				// 	}
+					if err != nil {
+						return
+					}
 
-				// 	desired, _ := strconv.Atoi(args[0].bulk)
-				// 	t, _ := strconv.Atoi(args[1].bulk)
+					desired, _ := strconv.Atoi(args[0].bulk)
+					t, _ := strconv.Atoi(args[1].bulk)
 
-				// 	timer := time.After(time.Duration(t) * time.Millisecond)
-				// 	var ackBoi int
-				// loop:
-				// 	for {
-				// 		select {
-				// 		case <-chanChan:
-				// 			ackBoi++
-				// 			if ackBoi == desired {
-				// 				break loop
-				// 			}
-				// 		case <-timer:
-				// 			break loop
-				// 		}
-				// 	}
+					timer := time.After(time.Duration(t) * time.Millisecond)
+					var ackBoi int
+				loop:
+					for {
+						select {
+						case <-chanChan:
+							ackBoi++
+							if ackBoi == desired {
+								break loop
+							}
+						case <-timer:
+							break loop
+						}
+					}
 
-				// 	fmt.Println(ackBoi)
-				// 	writer.Write(Value{typ: "integer", integer: ackBoi})
-				// 	continue
-				// }
+					fmt.Println(ackBoi)
+					writer.Write(Value{typ: "integer", integer: ackBoi})
+					continue
+				}
 
 				handle, ok := Handlers[command]
 				if !ok {
