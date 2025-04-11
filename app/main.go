@@ -121,6 +121,7 @@ func main() {
 				writer := NewWriter(conn)
 
 				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
+					fmt.Println(val)
 					writer.Write(val)
 				}
 
