@@ -117,10 +117,9 @@ func main() {
 					continue
 				}
 
+				fmt.Println("From replica", value)
 				val := handle(args)
 				writer := NewWriter(conn)
-
-				fmt.Println("From replica", val)
 
 				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
 					writer.Write(val)
