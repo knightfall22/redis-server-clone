@@ -318,10 +318,9 @@ func wait(args []Value) Value {
 	}
 
 	if len(store) <= 0 {
+		fmt.Println("I do not think you can exist --not truly anyway")
 		return Value{typ: "integer", integer: len(connections)}
 	}
-
-	fmt.Println(len(connections))
 
 	acks := writeGetAck()
 	multi := io.MultiWriter(connections...)
