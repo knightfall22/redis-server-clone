@@ -215,6 +215,7 @@ func main() {
 							if ackBoi == desired {
 								break loop
 							}
+							fmt.Println("This si", ackBoi)
 						case <-timer:
 							break loop
 						}

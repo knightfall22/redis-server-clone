@@ -159,7 +159,7 @@ func set(args []Value) Value {
 
 	store = append(store, struct{}{})
 
-	fmt.Println(store)
+	fmt.Println("store length", len(store))
 
 	return Value{typ: "string", str: "OK"}
 }
