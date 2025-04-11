@@ -22,7 +22,7 @@ var (
 	offsetMu sync.Mutex
 )
 
-var chanChan chan bool
+var chanChan = make(chan bool, 1)
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -159,7 +159,7 @@ func main() {
 
 				value, err := resp.Read()
 
-				fmt.Println(value)
+				fmt.Println(conn.RemoteAddr(), value)
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
 					return
@@ -230,6 +230,8 @@ func main() {
 				}
 
 				result := handle(args)
+
+				fmt.Println(result)
 				writer.Write(result)
 
 				//Todo: refactor probably not the best way to do this
