@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -29,29 +28,10 @@ func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
-	//Flags to accept the configs
-	dir := flag.String("dir", ".", "Directory containing db file")
-	dbfilename := flag.String("dbfilename", "dump.rdb", "Database file")
-	port := flag.String("port", "6379", "Port number")
-	replicaOf := flag.String("replicaof", "", "set has replica of a master")
-
-	flag.Parse()
-
 	//Configuration setup
-	ConfigMu.Lock()
-	Config["dir"] = *dir
-	Config["dbfilename"] = *dbfilename
-	Config["port"] = *port
-	if *replicaOf != "" {
-		splitedStr := strings.Split(*replicaOf, " ")
-		*replicaOf = strings.Join(splitedStr, ":")
-	}
-	Config["replicaOf"] = *replicaOf
-	Config["masterID"] = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
-	Config["masterOffset"] = "0"
-	ConfigMu.Unlock()
+	InitializeConfig()
 
-	dec := NewDecoder(Config["dir"] + "/" + Config["dbfilename"])
+	dec := NewDecoder(ConfigMap["fullpath"])
 
 	//when file is found
 	if dec != nil {
@@ -65,10 +45,10 @@ func main() {
 	fmt.Println("SETS", SETs)
 
 	//if slave connect to master
-	if *replicaOf != "" {
-		conn, err := net.Dial("tcp", *replicaOf)
+	if ConfigMap.IsSlave() {
+		conn, err := net.Dial("tcp", ConfigMap["replicaOf"])
 		if err != nil {
-			fmt.Println("Failed to bind to port ", *replicaOf)
+			fmt.Println("Failed to bind to port ", ConfigMap["replicaOf"])
 			conn.Close()
 			os.Exit(1)
 		}
@@ -79,7 +59,7 @@ func main() {
 
 		//Todo: There has to be a better way to do this
 		time.Sleep(time.Second * 1)
-		writer.Write(replconfLWriter(*port))
+		writer.Write(replconfLWriter())
 
 		time.Sleep(time.Second * 1)
 		writer.Write(replconfCWriter())
@@ -139,14 +119,14 @@ func main() {
 	}
 
 	// Uncomment this block to pass the first stage
-	url := fmt.Sprintf("localhost:%s", *port)
+	url := fmt.Sprintf("localhost:%s", ConfigMap["port"])
 	l, err := net.Listen("tcp", url)
 	if err != nil {
-		fmt.Println("Failed to bind to port ", *port)
+		fmt.Println("Failed to bind to port ", ConfigMap["port"])
 		os.Exit(1)
 	}
 
-	fmt.Println("Connected on port " + *port)
+	fmt.Println("Connected on port " + ConfigMap["port"])
 
 	for {
 		conn, err := l.Accept()

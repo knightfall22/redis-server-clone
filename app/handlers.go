@@ -47,9 +47,6 @@ func echo(args []Value) Value {
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
-var Config = map[string]string{}
-var ConfigMu = sync.RWMutex{}
-
 func config(args []Value) Value {
 	if len(args) == 0 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'config' command"}
@@ -77,15 +74,11 @@ func configGet(args []Value) Value {
 
 	fmt.Printf("args: %#v\n", args)
 	k := args[0].bulk
-	ConfigMu.Lock()
-	defer ConfigMu.Unlock()
-	val, ok := Config[k]
+	val, ok := ConfigMap[k]
 
 	if !ok {
 		return Value{typ: "null"}
 	}
-
-	fmt.Printf("Config %+v\n", Config)
 
 	arrVal := Value{typ: "array"}
 	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: k})
@@ -97,10 +90,7 @@ func configGet(args []Value) Value {
 func configGetAll() Value {
 	result := Value{typ: "array"}
 
-	ConfigMu.RLock()
-	defer ConfigMu.RUnlock()
-
-	for k, v := range Config {
+	for k, v := range ConfigMap {
 		result.array = append(result.array, Value{typ: "bulk", bulk: k})
 		result.array = append(result.array, Value{typ: "bulk", bulk: v})
 	}
@@ -116,9 +106,7 @@ func configSet(args []Value) Value {
 	key := args[0].bulk
 	value := args[1].bulk
 
-	ConfigMu.Lock()
-	Config[key] = value
-	ConfigMu.Unlock()
+	ConfigMap[key] = value
 
 	return Value{typ: "string", str: "OK"}
 
@@ -293,14 +281,11 @@ func info(args []Value) Value {
 
 func replicationInfo() Value {
 
-	ConfigMu.RLock()
-	defer ConfigMu.RUnlock()
-
-	id := Config["masterID"]
-	offset := Config["masterOffset"]
+	id := ConfigMap["masterID"]
+	offset := ConfigMap["masterOffset"]
 
 	var strOut string
-	if rep := Config["replicaOf"]; rep != "" {
+	if ConfigMap.IsSlave() {
 		strOut += "role:slave\n"
 	} else {
 		strOut += "role:master\n"
@@ -361,11 +346,8 @@ func psync(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"}
 	}
 
-	ConfigMu.RLock()
-	defer ConfigMu.RUnlock()
-
-	id := Config["masterID"]
-	offset := Config["masterOffset"]
+	id := ConfigMap["masterID"]
+	offset := ConfigMap["masterOffset"]
 
 	strOut := fmt.Sprintf("FULLRESYNC %s %s", id, offset)
 
@@ -396,24 +378,16 @@ func replconf(args []Value) Value {
 	}
 }
 
-// func wait(args []Value) Value {
-// 	if len(args) < 2 {
-// 		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
-// 	}
-
-// 	return Value{typ: "integer", integer: len(connections)}
-// }
-
 // Slave commands
 func ping2() Value {
 	return Value{typ: "array", array: []Value{{typ: "bulk", bulk: "PING"}}}
 }
 
-func replconfLWriter(port string) Value {
+func replconfLWriter() Value {
 	return Value{typ: "array", array: []Value{
 		{typ: "bulk", bulk: "REPLCONF"},
 		{typ: "bulk", bulk: "listening-port"},
-		{typ: "bulk", bulk: port},
+		{typ: "bulk", bulk: ConfigMap["port"]},
 	},
 	}
 }
@@ -453,9 +427,6 @@ func writeGetAck() Value {
 
 // Master replies to replica
 func fullsync() Value {
-	ConfigMu.RLock()
-	defer ConfigMu.RUnlock()
-
 	//Todo: probably would work in cases when a dump.rdb file exists
 	// dir := Config["dir"] + "/" + Config["dbfilename"]
 
