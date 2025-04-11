@@ -183,6 +183,17 @@ func main() {
 
 				writer := NewWriter(conn)
 
+				handle, ok := Handlers[command]
+				if !ok {
+					fmt.Println("Invalid command: ", command)
+					writer.Write(Value{typ: "string", str: ""})
+					continue
+				}
+
+				result := handle(args)
+
+				writer.Write(result)
+
 				//Test propagation
 				if command == "SET" {
 					multi := io.MultiWriter(connections...)
@@ -193,18 +204,6 @@ func main() {
 					}
 
 				}
-
-				handle, ok := Handlers[command]
-				if !ok {
-					fmt.Println("Invalid command: ", command)
-					writer.Write(Value{typ: "string", str: ""})
-					continue
-				}
-
-				result := handle(args)
-
-				fmt.Println(result)
-				writer.Write(result)
 
 				//Todo: refactor probably not the best way to do this
 
