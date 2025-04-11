@@ -317,7 +317,7 @@ func wait(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
 	}
 
-	if len(store) <= 0 {
+	if len(store) == 0 {
 		fmt.Println("I do not think you can exist --not truly anyway")
 		return Value{typ: "integer", integer: len(connections)}
 	}
