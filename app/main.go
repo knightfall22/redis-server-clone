@@ -91,6 +91,7 @@ func main() {
 			resp := NewResp(conn)
 
 			for {
+				fmt.Println("Hello")
 				value, err := resp.Read()
 				if err != nil {
 					fmt.Println("Error reading from connection", err.Error())
