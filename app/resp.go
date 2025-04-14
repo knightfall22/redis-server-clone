@@ -203,6 +203,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.get(args))
 	case "PSYNC":
 		return w.psync(args)
+	case "TYPE":
+		return w.Write(w.typeIdent(args))
 	case "PING":
 		return w.Write(w.ping(args))
 	case "REPLCONF":
@@ -338,6 +340,19 @@ func (w *Writer) get(args []Value) Value {
 	}
 
 	return Value{typ: "bulk", bulk: val.value}
+}
+
+func (w *Writer) typeIdent(args []Value) Value {
+	if len(args) != 1 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'type'  command"}
+	}
+
+	key := args[0].bulk
+	if _, ok := SETs[key]; !ok {
+		return Value{typ: "string", str: "none"}
+	}
+
+	return Value{typ: "string", str: "string"}
 }
 
 func (w *Writer) ping(args []Value) Value {
