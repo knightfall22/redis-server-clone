@@ -215,20 +215,24 @@ func (w *Writer) HandleSlave(v Value) error {
 	command := strings.ToUpper(v.array[0].bulk)
 	args := v.array[1:]
 
+	var err error
+
+	switch command {
+	case "SET":
+		err = w.set(v, args)
+	case "REPLCONF":
+		err = w.replconf(args)
+	default:
+		err = w.Write(Value{typ: "string", str: ""})
+	}
+
 	valCopy := v
 	valcount := len(valCopy.Marshal())
 	offsetMu.Lock()
 	offset += valcount
 	offsetMu.Unlock()
 
-	switch command {
-	case "SET":
-		return w.set(v, args)
-	case "REPLCONF":
-		return w.replconf(args)
-	default:
-		return w.Write(Value{typ: "string", str: ""})
-	}
+	return err
 }
 
 func (w *Writer) info(args []Value) error {
