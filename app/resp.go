@@ -6,7 +6,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -200,7 +199,6 @@ func (w *Writer) psync(args []Value) error {
 	strOut := fmt.Sprintf("FULLRESYNC %s %s", id, offset)
 
 	w.Write(Value{typ: "string", str: strOut})
-	time.Sleep(1 * time.Second)
 	w.Write(fullsync())
 
 	connMu.Lock()

@@ -158,33 +158,35 @@ func main() {
 					continue
 				}
 
-				command := strings.ToUpper(value.array[0].bulk)
-				args := value.array[1:]
+				// command := strings.ToUpper(value.array[0].bulk)
+				// args := value.array[1:]
 
 				writer := NewWriter(conn)
 
-				handle, ok := Handlers[command]
-				if !ok {
-					fmt.Println("Invalid command: ", command)
-					writer.Write(Value{typ: "string", str: ""})
-					continue
-				}
+				writer.Handler(value)
 
-				result := handle(args)
+				// handle, ok := Handlers[command]
+				// if !ok {
+				// 	fmt.Println("Invalid command: ", command)
+				// 	writer.Write(Value{typ: "string", str: ""})
+				// 	continue
+				// }
 
-				writer.Write(result)
+				// result := handle(args)
 
-				//Test propagation
-				if command == "SET" {
-					val := value
-					multi := io.MultiWriter(connections...)
-					_, err = multi.Write(val.Marshal())
+				// writer.Write(result)
 
-					if err != nil {
-						return
-					}
+				// //Test propagation
+				// if command == "SET" {
+				// 	val := value
+				// 	multi := io.MultiWriter(connections...)
+				// 	_, err = multi.Write(val.Marshal())
 
-				}
+				// 	if err != nil {
+				// 		return
+				// 	}
+
+				// }
 
 				//Todo: refactor probably not the best way to do this
 
