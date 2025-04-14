@@ -201,6 +201,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.keys(args)
 	case "CONFIG":
 		return w.config(args)
+	case "ECHO":
+		return w.echo(args)
 	}
 
 	return nil
@@ -478,7 +480,14 @@ func (w *Writer) configSet(args []Value) Value {
 	ConfigMap[key] = value
 
 	return Value{typ: "string", str: "OK"}
+}
 
+func (w *Writer) echo(args []Value) error {
+	if len(args) == 0 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'echo' command"})
+	}
+
+	return w.Write(Value{typ: "bulk", bulk: args[0].bulk})
 }
 
 func (w *Writer) Write(v Value) error {
