@@ -186,6 +186,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.psync(args)
 	case "PING":
 		return w.ping(args)
+	case "REPLCONF":
+		return w.replconf(args)
 	}
 
 	return nil
@@ -193,10 +195,8 @@ func (w *Writer) Handler(v Value) error {
 
 func (w *Writer) ping(args []Value) error {
 	if len(args) == 0 {
-		w.Write(Value{typ: "string", str: "PONG"})
+		return w.Write(Value{typ: "string", str: "PONG"})
 	}
-
-	fmt.Println("this right here", args)
 
 	return w.Write(Value{typ: "string", str: args[0].bulk})
 }
@@ -225,6 +225,30 @@ func (w *Writer) psync(args []Value) error {
 	connections = append(connections, w.writer)
 	connMu.Unlock()
 	return nil
+}
+
+func (w *Writer) replconf(args []Value) error {
+	if len(args) < 2 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'replconf' command"})
+	}
+
+	command := strings.ToUpper(args[0].bulk)
+
+	switch command {
+	case "GETACK":
+		return w.Write(Value{typ: "array", array: []Value{
+			{typ: "bulk", bulk: "REPLCONF"},
+			{typ: "bulk", bulk: "ACK"},
+			{typ: "bulk", bulk: strconv.Itoa(offset)},
+		}})
+
+	case "ACK":
+		chanChan <- true
+		fmt.Println("hello angel")
+		return w.Write(Value{})
+	default:
+		return w.Write(Value{typ: "string", str: "OK"})
+	}
 }
 
 func (w *Writer) Write(v Value) error {
