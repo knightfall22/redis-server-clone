@@ -199,6 +199,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.wait(args)
 	case "KEYS":
 		return w.keys(args)
+	case "CONFIG":
+		return w.config(args)
 	}
 
 	return nil
@@ -412,6 +414,71 @@ func (w *Writer) keys(args []Value) error {
 	}
 
 	return w.Write(arrVal)
+}
+
+func (w *Writer) config(args []Value) error {
+	if len(args) == 0 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'config' command"})
+	}
+
+	command := strings.ToUpper(args[0].bulk)
+
+	switch command {
+	case "GET":
+		if len(args) == 1 {
+			return w.Write(w.configGetAll())
+		}
+		return w.Write(w.configGet(args[1:]))
+	case "SET":
+		return w.Write(w.configSet(args[1:]))
+	}
+
+	return w.Write(Value{typ: "error", str: "ERR error has occured with the 'config' command"})
+}
+
+func (w *Writer) configGet(args []Value) Value {
+	if len(args) == 0 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'config get' command"}
+	}
+
+	fmt.Printf("args: %#v\n", args)
+	k := args[0].bulk
+	val, ok := ConfigMap[k]
+
+	if !ok {
+		return Value{typ: "null"}
+	}
+
+	arrVal := Value{typ: "array"}
+	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: k})
+	arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: val})
+	fmt.Printf("arrVal: %#v\n", arrVal)
+	return arrVal
+}
+
+func (w *Writer) configGetAll() Value {
+	result := Value{typ: "array"}
+
+	for k, v := range ConfigMap {
+		result.array = append(result.array, Value{typ: "bulk", bulk: k})
+		result.array = append(result.array, Value{typ: "bulk", bulk: v})
+	}
+
+	return result
+}
+
+func (w *Writer) configSet(args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
+	}
+
+	key := args[0].bulk
+	value := args[1].bulk
+
+	ConfigMap[key] = value
+
+	return Value{typ: "string", str: "OK"}
+
 }
 
 func (w *Writer) Write(v Value) error {
