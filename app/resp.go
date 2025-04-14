@@ -24,9 +24,9 @@ var (
 )
 
 var (
-	stream           = make(map[string]map[string][]MapKVs)
-	streamMu         = sync.RWMutex{}
-	topStream string = ""
+	stream    = make(map[string]map[string][]MapKVs)
+	streamMu  = sync.RWMutex{}
+	topStream = make(map[string]string)
 )
 
 var (
@@ -698,7 +698,7 @@ func (w *Writer) xAdd(args []Value) Value {
 		stream[key] = make(map[string][]MapKVs)
 	}
 	stream[key][id] = append(stream[key][id], kvs...)
-	topStream = id
+	topStream[key] = id
 
 	return Value{typ: "bulk", bulk: id}
 }
@@ -719,7 +719,7 @@ func (w *Writer) validate(key string, id string) error {
 		return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
 	}
 	//left side must not be less than top
-	if topStream != "" {
+	if topStream, ok := topStream[key]; ok {
 		tSplit := strings.Split(topStream, "-")
 		tl, _ := strconv.Atoi(tSplit[0])
 		tr, _ := strconv.Atoi(tSplit[1])
@@ -734,7 +734,6 @@ func (w *Writer) validate(key string, id string) error {
 
 	}
 
-	//case for 0-1
 	return nil
 }
 
