@@ -6,6 +6,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -182,6 +183,10 @@ func (w *Writer) Handler(v Value) error {
 	args := v.array[1:]
 
 	switch command {
+	case "SET":
+		return w.set(v, args)
+	case "GET":
+		return w.get(args)
 	case "PSYNC":
 		return w.psync(args)
 	case "PING":
@@ -191,6 +196,71 @@ func (w *Writer) Handler(v Value) error {
 	}
 
 	return nil
+}
+
+func (w *Writer) set(v Value, args []Value) error {
+	if len(args) < 2 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"})
+	}
+
+	var value setVal
+	key := args[0].bulk
+
+	if len(args) == 4 {
+		command := strings.ToUpper(args[2].bulk)
+
+		if command == "PX" {
+			t_out, err := strconv.Atoi(args[3].bulk)
+
+			if err != nil {
+				return w.Write(Value{typ: "error", str: "ERR invalid timeout value for 'PX' command"})
+			}
+
+			timeout := time.Now().Add(time.Millisecond * time.Duration(t_out))
+			value.value = args[1].bulk
+			value.timeout = &timeout
+		}
+	} else {
+		value.value = args[1].bulk
+		value.timeout = nil
+	}
+
+	SETsMu.Lock()
+	SETs[key] = value
+	SETsMu.Unlock()
+
+	store = append(store, struct{}{})
+
+	//Progate writes
+	w.propagate(v)
+
+	return w.Write(Value{typ: "string", str: "OK"})
+}
+
+func (w *Writer) get(args []Value) error {
+	if len(args) != 1 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"})
+	}
+
+	key := args[0].bulk
+
+	SETsMu.RLock()
+	val, ok := SETs[key]
+	SETsMu.RUnlock()
+
+	if !ok {
+		return w.Write(Value{typ: "null"})
+	}
+
+	if val.timeout != nil && val.timeout.Before(time.Now()) {
+		SETsMu.Lock()
+		delete(SETs, key)
+		SETsMu.Unlock()
+
+		return w.Write(Value{typ: "null"})
+	}
+
+	return w.Write(Value{typ: "bulk", bulk: val.value})
 }
 
 func (w *Writer) ping(args []Value) error {
@@ -259,6 +329,14 @@ func (w *Writer) Write(v Value) error {
 		return err
 	}
 	return nil
+}
+
+// Write propagation
+func (w *Writer) propagate(v Value) error {
+	multi := io.MultiWriter(connections...)
+	_, err := multi.Write(v.Marshal())
+
+	return err
 }
 
 // Convert response to bytes representing the response RESP
