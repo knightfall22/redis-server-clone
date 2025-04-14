@@ -187,25 +187,25 @@ func (w *Writer) Handler(v Value) error {
 
 	switch command {
 	case "SET":
-		return w.set(v, args)
+		return w.Write(w.set(v, args))
 	case "GET":
-		return w.get(args)
+		return w.Write(w.get(args))
 	case "PSYNC":
 		return w.psync(args)
 	case "PING":
-		return w.ping(args)
+		return w.Write(w.ping(args))
 	case "REPLCONF":
-		return w.replconf(args)
+		return w.Write(w.replconf(args))
 	case "INFO":
-		return w.info(args)
+		return w.Write(w.info(args))
 	case "WAIT":
-		return w.wait(args)
+		return w.Write(w.wait(args))
 	case "KEYS":
-		return w.keys(args)
+		return w.Write(w.keys(args))
 	case "CONFIG":
-		return w.config(args)
+		return w.Write(w.config(args))
 	case "ECHO":
-		return w.echo(args)
+		return w.Write(w.echo(args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
 	}
@@ -223,9 +223,9 @@ func (w *Writer) HandleSlave(v Value) error {
 	switch command {
 	case "PING":
 	case "SET":
-		err = w.set(v, args)
+		w.set(v, args)
 	case "REPLCONF":
-		err = w.replconf(args)
+		err = w.Write(w.replconf(args))
 	default:
 		err = w.Write(Value{typ: "string", str: ""})
 	}
@@ -239,9 +239,9 @@ func (w *Writer) HandleSlave(v Value) error {
 	return err
 }
 
-func (w *Writer) info(args []Value) error {
+func (w *Writer) info(args []Value) Value {
 	if len(args) == 0 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"}
 	}
 
 	command := strings.ToUpper(args[0].bulk)
@@ -261,15 +261,15 @@ func (w *Writer) info(args []Value) error {
 		strOut += fmt.Sprintf("master_replid:%s\n", id)
 		strOut += fmt.Sprintf("master_repl_offset:%s", offset)
 
-		return w.Write(Value{typ: "bulk", bulk: strOut})
+		return Value{typ: "bulk", bulk: strOut}
 	}
 
-	return w.Write(Value{typ: "error", str: "ERR error has occured with the 'config' command"})
+	return Value{typ: "error", str: "ERR error has occured with the 'config' command"}
 }
 
-func (w *Writer) set(v Value, args []Value) error {
+func (w *Writer) set(v Value, args []Value) Value {
 	if len(args) < 2 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
 	}
 
 	var value setVal
@@ -282,7 +282,7 @@ func (w *Writer) set(v Value, args []Value) error {
 			t_out, err := strconv.Atoi(args[3].bulk)
 
 			if err != nil {
-				return w.Write(Value{typ: "error", str: "ERR invalid timeout value for 'PX' command"})
+				return Value{typ: "error", str: "ERR invalid timeout value for 'PX' command"}
 			}
 
 			timeout := time.Now().Add(time.Millisecond * time.Duration(t_out))
@@ -298,20 +298,17 @@ func (w *Writer) set(v Value, args []Value) error {
 	SETs[key] = value
 	SETsMu.Unlock()
 
-	if ConfigMap.IsSlave() {
-		return w.Write(Value{})
-	}
 	store = append(store, struct{}{})
 
 	//Progate writes
 	w.propagate(v)
 
-	return w.Write(Value{typ: "string", str: "OK"})
+	return Value{typ: "string", str: "OK"}
 }
 
-func (w *Writer) get(args []Value) error {
+func (w *Writer) get(args []Value) Value {
 	if len(args) != 1 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
 	}
 
 	key := args[0].bulk
@@ -321,7 +318,7 @@ func (w *Writer) get(args []Value) error {
 	SETsMu.RUnlock()
 
 	if !ok {
-		return w.Write(Value{typ: "null"})
+		return Value{typ: "null"}
 	}
 
 	if val.timeout != nil && val.timeout.Before(time.Now()) {
@@ -329,18 +326,18 @@ func (w *Writer) get(args []Value) error {
 		delete(SETs, key)
 		SETsMu.Unlock()
 
-		return w.Write(Value{typ: "null"})
+		return Value{typ: "null"}
 	}
 
-	return w.Write(Value{typ: "bulk", bulk: val.value})
+	return Value{typ: "bulk", bulk: val.value}
 }
 
-func (w *Writer) ping(args []Value) error {
+func (w *Writer) ping(args []Value) Value {
 	if len(args) == 0 {
-		return w.Write(Value{typ: "string", str: "PONG"})
+		return Value{typ: "string", str: "PONG"}
 	}
 
-	return w.Write(Value{typ: "string", str: args[0].bulk})
+	return Value{typ: "string", str: args[0].bulk}
 }
 
 func (w *Writer) psync(args []Value) error {
@@ -369,9 +366,9 @@ func (w *Writer) psync(args []Value) error {
 	return nil
 }
 
-func (w *Writer) replconf(args []Value) error {
+func (w *Writer) replconf(args []Value) Value {
 	if len(args) < 2 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'replconf' command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'replconf' command"}
 	}
 
 	command := strings.ToUpper(args[0].bulk)
@@ -379,29 +376,29 @@ func (w *Writer) replconf(args []Value) error {
 	switch command {
 	case "GETACK":
 		fmt.Println("Say hello")
-		return w.Write(Value{typ: "array", array: []Value{
+		return Value{typ: "array", array: []Value{
 			{typ: "bulk", bulk: "REPLCONF"},
 			{typ: "bulk", bulk: "ACK"},
 			{typ: "bulk", bulk: strconv.Itoa(offset)},
-		}})
+		}}
 
 	case "ACK":
 		chanChan <- true
 		fmt.Println("hello angel")
-		return w.Write(Value{})
+		return Value{}
 	default:
-		return w.Write(Value{typ: "string", str: "OK"})
+		return Value{typ: "string", str: "OK"}
 	}
 }
 
-func (w *Writer) wait(args []Value) error {
+func (w *Writer) wait(args []Value) Value {
 	if len(args) < 2 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
 	}
 
 	if len(store) == 0 {
 		fmt.Println("I do not think you can exist --not truly anyway")
-		return w.Write(Value{typ: "integer", integer: len(connections)})
+		return Value{typ: "integer", integer: len(connections)}
 	}
 
 	fmt.Println("Who are you to tell me what I can or can't be")
@@ -409,7 +406,7 @@ func (w *Writer) wait(args []Value) error {
 	acks := writeGetAck()
 	err := w.propagate(acks)
 	if err != nil {
-		return w.Write(Value{typ: "error", str: "ERR " + err.Error()})
+		return Value{typ: "error", str: "ERR " + err.Error()}
 	}
 
 	desired, _ := strconv.Atoi(args[0].bulk)
@@ -433,12 +430,12 @@ loop:
 		}
 	}
 
-	return w.Write(Value{typ: "integer", integer: ackBoi})
+	return Value{typ: "integer", integer: ackBoi}
 }
 
-func (w *Writer) keys(args []Value) error {
+func (w *Writer) keys(args []Value) Value {
 	if len(args) < 1 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'key' command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'key' command"}
 	}
 
 	SETsMu.RLock()
@@ -450,12 +447,12 @@ func (w *Writer) keys(args []Value) error {
 		arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: k})
 	}
 
-	return w.Write(arrVal)
+	return arrVal
 }
 
-func (w *Writer) config(args []Value) error {
+func (w *Writer) config(args []Value) Value {
 	if len(args) == 0 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'config' command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'config' command"}
 	}
 
 	command := strings.ToUpper(args[0].bulk)
@@ -463,14 +460,14 @@ func (w *Writer) config(args []Value) error {
 	switch command {
 	case "GET":
 		if len(args) == 1 {
-			return w.Write(w.configGetAll())
+			return w.configGetAll()
 		}
-		return w.Write(w.configGet(args[1:]))
+		return w.configGet(args[1:])
 	case "SET":
-		return w.Write(w.configSet(args[1:]))
+		return w.configSet(args[1:])
 	}
 
-	return w.Write(Value{typ: "error", str: "ERR error has occured with the 'config' command"})
+	return Value{typ: "error", str: "ERR error has occured with the 'config' command"}
 }
 
 func (w *Writer) configGet(args []Value) Value {
@@ -517,12 +514,12 @@ func (w *Writer) configSet(args []Value) Value {
 	return Value{typ: "string", str: "OK"}
 }
 
-func (w *Writer) echo(args []Value) error {
+func (w *Writer) echo(args []Value) Value {
 	if len(args) == 0 {
-		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'echo' command"})
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'echo' command"}
 	}
 
-	return w.Write(Value{typ: "bulk", bulk: args[0].bulk})
+	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
 func (w *Writer) Write(v Value) error {
