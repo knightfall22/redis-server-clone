@@ -222,7 +222,7 @@ func (w *Writer) HandleSlave(v Value) error {
 
 	switch command {
 	case "PING":
-		return w.Write(Value{typ: "array", array: []Value{Value{typ: "string", str: "PONG"}}})
+		return nil
 	case "SET":
 		err = w.set(v, args)
 	case "REPLCONF":
