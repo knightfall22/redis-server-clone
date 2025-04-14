@@ -466,11 +466,13 @@ func (w *Writer) typeIdent(args []Value) Value {
 	}
 
 	key := args[0].bulk
-	if _, ok := SETs[key]; !ok {
-		return Value{typ: "string", str: "none"}
+	if _, ok := SETs[key]; ok {
+		return Value{typ: "string", str: "string"}
+	} else if _, ok := stream[key]; ok {
+		return Value{typ: "string", str: "stream"}
 	}
 
-	return Value{typ: "string", str: "string"}
+	return Value{typ: "string", str: "none"}
 }
 
 func (w *Writer) ping(args []Value) Value {
