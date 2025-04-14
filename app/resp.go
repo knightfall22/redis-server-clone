@@ -216,6 +216,7 @@ func (w *Writer) HandleSlave(v Value) error {
 	args := v.array[1:]
 
 	fmt.Println("Father of a failure", command)
+	fmt.Println("args", args)
 
 	var err error
 
