@@ -7,10 +7,21 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 var ERRInvalidCommand = errors.New("ERR invalid command")
+
+var (
+	connections []io.Writer
+	connMu      sync.Mutex
+)
+
+var (
+	offset   = 0
+	offsetMu sync.Mutex
+)
 
 const (
 	STRING  = '+'
@@ -214,9 +225,6 @@ func (w *Writer) Handler(v Value) error {
 func (w *Writer) HandleSlave(v Value) error {
 	command := strings.ToUpper(v.array[0].bulk)
 	args := v.array[1:]
-
-	fmt.Println("Father of a failure", command)
-	fmt.Println("args", args)
 
 	var err error
 
