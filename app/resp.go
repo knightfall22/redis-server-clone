@@ -716,6 +716,11 @@ func (w *Writer) validate(key string, id *string) error {
 			tr, _ := strconv.Atoi(tSplit[1])
 
 			tr++
+
+			if tl == 0 && tr == 0 {
+				tr++
+			}
+
 			*id = strings.Join([]string{strconv.Itoa(tl), strconv.Itoa(tr)}, "-")
 			return nil
 		} else {
