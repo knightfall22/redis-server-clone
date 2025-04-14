@@ -188,13 +188,13 @@ func main() {
 
 				//Todo: refactor probably not the best way to do this
 
-				if command == "PSYNC" {
-					writer.Write(fullsync())
+				// if command == "PSYNC" {
+				// 	writer.Write(fullsync())
 
-					connMu.Lock()
-					connections = append(connections, conn)
-					connMu.Unlock()
-				}
+				// 	connMu.Lock()
+				// 	connections = append(connections, conn)
+				// 	connMu.Unlock()
+				// }
 
 			}
 		}(conn)
