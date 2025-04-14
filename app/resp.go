@@ -220,6 +220,8 @@ func (w *Writer) HandleSlave(v Value) error {
 	var err error
 
 	switch command {
+	case "PING":
+		return w.ping(args)
 	case "SET":
 		err = w.set(v, args)
 	case "REPLCONF":
