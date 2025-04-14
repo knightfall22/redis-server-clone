@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -87,14 +88,31 @@ func main() {
 					continue
 				}
 
-				writer := NewWriter(conn)
-				err = writer.HandleSlave(value)
-				if err != nil {
-					fmt.Println("Error writing to connection", err.Error())
-					return
-				}
-				continue
+				command := strings.ToUpper(value.array[0].bulk)
+				args := value.array[1:]
 
+				handle, ok := Handlers[command]
+				if !ok {
+					fmt.Println("Invalid command: ", command)
+					writer.Write(Value{typ: "string", str: ""})
+					continue
+				}
+
+				fmt.Println("From replica", value)
+				val := handle(args)
+				writer := NewWriter(conn)
+
+				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
+					writer.Write(val)
+				}
+
+				valCopy := value
+				valcount := len(valCopy.Marshal())
+				offsetMu.Lock()
+				offset += valcount
+				offsetMu.Unlock()
+
+				// writer.Write(writeAck())
 			}
 		}(conn)
 
