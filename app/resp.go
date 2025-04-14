@@ -182,7 +182,7 @@ func (w *Writer) Handler(v Value) error {
 	args := v.array[1:]
 
 	switch command {
-	case "PYNC":
+	case "PSYNC":
 		return w.psync(args)
 	case "PING":
 		return w.ping(args)
