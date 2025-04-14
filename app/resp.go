@@ -223,6 +223,7 @@ func (w *Writer) HandleSlave(v Value) error {
 	case "REPLCONF":
 		err = w.replconf(args)
 	default:
+		fmt.Println("Failed slave")
 		err = w.Write(Value{typ: "string", str: ""})
 	}
 
