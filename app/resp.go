@@ -197,6 +197,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.info(args)
 	case "WAIT":
 		return w.wait(args)
+	case "KEYS":
+		return w.keys(args)
 	}
 
 	return nil
@@ -393,6 +395,23 @@ loop:
 	}
 
 	return w.Write(Value{typ: "integer", integer: ackBoi})
+}
+
+func (w *Writer) keys(args []Value) error {
+	if len(args) < 1 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'key' command"})
+	}
+
+	SETsMu.RLock()
+	defer SETsMu.RUnlock()
+
+	arrVal := Value{typ: "array"}
+
+	for k, _ := range SETs {
+		arrVal.array = append(arrVal.array, Value{typ: "bulk", bulk: k})
+	}
+
+	return w.Write(arrVal)
 }
 
 func (w *Writer) Write(v Value) error {
