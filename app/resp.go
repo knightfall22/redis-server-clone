@@ -299,7 +299,7 @@ func (w *Writer) set(v Value, args []Value) error {
 	SETsMu.Unlock()
 
 	if ConfigMap.IsSlave() {
-		return w.Write(Value{typ: "string", str: ""})
+		return nil
 	}
 	store = append(store, struct{}{})
 
