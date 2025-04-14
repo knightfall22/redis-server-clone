@@ -215,6 +215,8 @@ func (w *Writer) HandleSlave(v Value) error {
 	command := strings.ToUpper(v.array[0].bulk)
 	args := v.array[1:]
 
+	fmt.Println("Father of a failure", command)
+
 	var err error
 
 	switch command {
