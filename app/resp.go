@@ -379,6 +379,7 @@ func (w *Writer) replconf(args []Value) error {
 
 	switch command {
 	case "GETACK":
+		fmt.Println("Say hello")
 		return w.Write(Value{typ: "array", array: []Value{
 			{typ: "bulk", bulk: "REPLCONF"},
 			{typ: "bulk", bulk: "ACK"},
