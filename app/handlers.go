@@ -337,7 +337,6 @@ loop:
 		}
 	}
 
-	fmt.Println(ackBoi)
 	return Value{typ: "integer", integer: ackBoi}
 }
 

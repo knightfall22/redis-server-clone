@@ -193,9 +193,41 @@ func (w *Writer) Handler(v Value) error {
 		return w.ping(args)
 	case "REPLCONF":
 		return w.replconf(args)
+	case "INFO":
+		return w.info(args)
+	case "WAIT":
+		return w.wait(args)
 	}
 
 	return nil
+}
+
+func (w *Writer) info(args []Value) error {
+	if len(args) == 0 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"})
+	}
+
+	command := strings.ToUpper(args[0].bulk)
+
+	switch command {
+	case "REPLICATION":
+		id := ConfigMap["masterID"]
+		offset := ConfigMap["masterOffset"]
+
+		var strOut string
+		if ConfigMap.IsSlave() {
+			strOut += "role:slave\n"
+		} else {
+			strOut += "role:master\n"
+		}
+
+		strOut += fmt.Sprintf("master_replid:%s\n", id)
+		strOut += fmt.Sprintf("master_repl_offset:%s", offset)
+
+		return w.Write(Value{typ: "bulk", bulk: strOut})
+	}
+
+	return w.Write(Value{typ: "error", str: "ERR error has occured with the 'config' command"})
 }
 
 func (w *Writer) set(v Value, args []Value) error {
@@ -319,6 +351,48 @@ func (w *Writer) replconf(args []Value) error {
 	default:
 		return w.Write(Value{typ: "string", str: "OK"})
 	}
+}
+
+func (w *Writer) wait(args []Value) error {
+	if len(args) < 2 {
+		return w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"})
+	}
+
+	if len(store) == 0 {
+		fmt.Println("I do not think you can exist --not truly anyway")
+		return w.Write(Value{typ: "integer", integer: len(connections)})
+	}
+
+	fmt.Println("Who are you to tell me what I can or can't be")
+
+	acks := writeGetAck()
+	err := w.propagate(acks)
+	if err != nil {
+		return w.Write(Value{typ: "error", str: "ERR " + err.Error()})
+	}
+
+	desired, _ := strconv.Atoi(args[0].bulk)
+	t, _ := strconv.Atoi(args[1].bulk)
+
+	timer := time.After(time.Duration(t) * time.Millisecond)
+	var ackBoi int
+
+	fmt.Printf("the number doth haunt my dreams: (%d) (%d)\n", desired, t)
+loop:
+	for {
+		select {
+		case <-chanChan:
+			ackBoi++
+			if ackBoi == desired {
+				break loop
+			}
+			fmt.Println("This si", ackBoi)
+		case <-timer:
+			break loop
+		}
+	}
+
+	return w.Write(Value{typ: "integer", integer: ackBoi})
 }
 
 func (w *Writer) Write(v Value) error {
