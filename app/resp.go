@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -174,6 +175,36 @@ type Writer struct {
 
 func NewWriter(w io.Writer) *Writer {
 	return &Writer{writer: w}
+}
+
+func (w *Writer) Handler(v Value) error {
+	command := strings.ToUpper(v.array[0].bulk)
+	args := v.array[1:]
+	switch command {
+	case "PYNC":
+		return w.psync(args)
+	}
+
+	return nil
+}
+
+func (w *Writer) psync(args []Value) error {
+	if len(args) != 2 {
+		w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"})
+	}
+
+	id := ConfigMap["masterID"]
+	offset := ConfigMap["masterOffset"]
+
+	strOut := fmt.Sprintf("FULLRESYNC %s %s", id, offset)
+
+	w.Write(Value{typ: "string", str: strOut})
+	w.Write(fullsync())
+
+	connMu.Lock()
+	connections = append(connections, w.writer)
+	connMu.Unlock()
+	return nil
 }
 
 func (w *Writer) Write(v Value) error {
