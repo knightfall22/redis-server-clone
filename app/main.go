@@ -112,7 +112,7 @@ func main() {
 				// offsetMu.Unlock()
 
 				writer := NewWriter(conn)
-				err = writer.Handler(value)
+				err = writer.HandleSlave(value)
 				if err != nil {
 					fmt.Println("Error writing to connection", err.Error())
 					return
