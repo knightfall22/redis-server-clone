@@ -112,9 +112,6 @@ func configSet(args []Value) Value {
 
 }
 
-var SETs = map[string]setVal{}
-var SETsMu = sync.RWMutex{}
-
 func set(args []Value) Value {
 	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}

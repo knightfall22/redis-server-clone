@@ -19,6 +19,16 @@ var (
 )
 
 var (
+	SETs   = map[string]setVal{}
+	SETsMu = sync.RWMutex{}
+)
+
+var (
+	stream   = make(map[string]map[string][]MapKVs)
+	streamMu = sync.RWMutex{}
+)
+
+var (
 	offset   = 0
 	offsetMu sync.Mutex
 )
@@ -192,6 +202,112 @@ func NewWriter(w io.Writer) *Writer {
 	return &Writer{writer: w}
 }
 
+func (w *Writer) Write(v Value) error {
+	bytes := v.Marshal()
+
+	_, err := w.writer.Write(bytes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert response to bytes representing the response RESP
+func (v *Value) Marshal() []byte {
+	switch v.typ {
+	case "array":
+		return v.marshalArray()
+	case "bulk":
+		return v.marshalBulk()
+	case "string":
+		return v.marshalString()
+	case "map":
+		return v.marshallMap()
+	case "integer":
+		return v.marshallInteger()
+	case "file":
+		return v.marshalFile()
+	case "null":
+		return v.marshalNull()
+	case "error":
+		return v.marshalError()
+	default:
+		return []byte{}
+	}
+}
+
+func (v *Value) marshalArray() (bytes []byte) {
+	len := len(v.array)
+	bytes = append(bytes, ARRAY)
+	bytes = append(bytes, strconv.Itoa(len)...)
+	bytes = append(bytes, '\r', '\n')
+
+	for i := 0; i < len; i++ {
+		bytes = append(bytes, v.array[i].Marshal()...)
+	}
+
+	return bytes
+}
+
+func (v *Value) marshalBulk() (bytes []byte) {
+	bytes = append(bytes, BULK)
+	bytes = append(bytes, strconv.Itoa(len(v.bulk))...)
+	bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, v.bulk...)
+	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v *Value) marshalString() (bytes []byte) {
+	bytes = append(bytes, STRING)
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')
+
+	return bytes
+}
+
+func (v *Value) marshalError() (bytes []byte) {
+	bytes = append(bytes, ERROR)
+	bytes = append(bytes, v.str...)
+	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v *Value) marshallMap() (bytes []byte) {
+	len := len(v.array)
+	bytes = append(bytes, MAP)
+	bytes = append(bytes, strconv.Itoa(len/2)...)
+	bytes = append(bytes, '\r', '\n')
+
+	for i := 0; i < len; i += 2 {
+		bytes = append(bytes, v.array[i].Marshal()...)
+		bytes = append(bytes, v.array[i+1].Marshal()...)
+	}
+
+	return bytes
+}
+
+func (v *Value) marshalFile() (bytes []byte) {
+	bytes = append(bytes, BULK)
+	bytes = append(bytes, strconv.Itoa(v.len)...)
+	bytes = append(bytes, '\r', '\n')
+	bytes = append(bytes, v.contents...)
+	return bytes
+}
+
+func (v *Value) marshallInteger() (bytes []byte) {
+	bytes = append(bytes, INTEGER)
+	bytes = append(bytes, strconv.Itoa(v.integer)...)
+	bytes = append(bytes, '\r', '\n')
+	return bytes
+}
+
+func (v *Value) marshalNull() []byte {
+	//Default
+	return []byte("$-1\r\n")
+}
+
+// commands handler
 func (w *Writer) Handler(v Value) error {
 	command := strings.ToUpper(v.array[0].bulk)
 	args := v.array[1:]
@@ -219,6 +335,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.config(args))
 	case "ECHO":
 		return w.Write(w.echo(args))
+	case "XADD":
+		return w.Write(w.xAdd(args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
 	}
@@ -545,14 +663,34 @@ func (w *Writer) echo(args []Value) Value {
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
-func (w *Writer) Write(v Value) error {
-	bytes := v.Marshal()
-
-	_, err := w.writer.Write(bytes)
-	if err != nil {
-		return err
+func (w *Writer) xAdd(args []Value) Value {
+	if len(args) < 4 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'xadd' command"}
 	}
-	return nil
+
+	key := args[0].bulk
+	id := args[1].bulk
+	vals := args[2:]
+	kvs := make([]MapKVs, 0)
+
+	for i := 0; i < len(vals); i += 2 {
+		k := vals[i].bulk
+		if i+1 == len(vals) {
+			return Value{typ: "error", str: "ERR wrong number of arguments for 'xadd' command"}
+		}
+		v := vals[i+1].bulk
+
+		kvs = append(kvs, MapKVs{Key: k, Value: v})
+	}
+
+	streamMu.Lock()
+	if _, ok := stream[key]; !ok {
+		stream[key] = make(map[string][]MapKVs)
+	}
+	stream[key][id] = append(stream[key][id], kvs...)
+	streamMu.Unlock()
+
+	return Value{typ: "bulk", bulk: id}
 }
 
 // Write propagation
@@ -561,99 +699,4 @@ func (w *Writer) propagate(v Value) error {
 	_, err := multi.Write(v.Marshal())
 
 	return err
-}
-
-// Convert response to bytes representing the response RESP
-func (v *Value) Marshal() []byte {
-	switch v.typ {
-	case "array":
-		return v.marshalArray()
-	case "bulk":
-		return v.marshalBulk()
-	case "string":
-		return v.marshalString()
-	case "map":
-		return v.marshallMap()
-	case "integer":
-		return v.marshallInteger()
-	case "file":
-		return v.marshalFile()
-	case "null":
-		return v.marshalNull()
-	case "error":
-		return v.marshalError()
-	default:
-		return []byte{}
-	}
-}
-
-func (v *Value) marshalArray() (bytes []byte) {
-	len := len(v.array)
-	bytes = append(bytes, ARRAY)
-	bytes = append(bytes, strconv.Itoa(len)...)
-	bytes = append(bytes, '\r', '\n')
-
-	for i := 0; i < len; i++ {
-		bytes = append(bytes, v.array[i].Marshal()...)
-	}
-
-	return bytes
-}
-
-func (v *Value) marshalBulk() (bytes []byte) {
-	bytes = append(bytes, BULK)
-	bytes = append(bytes, strconv.Itoa(len(v.bulk))...)
-	bytes = append(bytes, '\r', '\n')
-	bytes = append(bytes, v.bulk...)
-	bytes = append(bytes, '\r', '\n')
-	return bytes
-}
-
-func (v *Value) marshalString() (bytes []byte) {
-	bytes = append(bytes, STRING)
-	bytes = append(bytes, v.str...)
-	bytes = append(bytes, '\r', '\n')
-
-	return bytes
-}
-
-func (v *Value) marshalError() (bytes []byte) {
-	bytes = append(bytes, ERROR)
-	bytes = append(bytes, v.str...)
-	bytes = append(bytes, '\r', '\n')
-	return bytes
-}
-
-func (v *Value) marshallMap() (bytes []byte) {
-	len := len(v.array)
-	bytes = append(bytes, MAP)
-	bytes = append(bytes, strconv.Itoa(len/2)...)
-	bytes = append(bytes, '\r', '\n')
-
-	for i := 0; i < len; i += 2 {
-		bytes = append(bytes, v.array[i].Marshal()...)
-		bytes = append(bytes, v.array[i+1].Marshal()...)
-	}
-
-	return bytes
-}
-
-func (v *Value) marshalFile() (bytes []byte) {
-	bytes = append(bytes, BULK)
-	bytes = append(bytes, strconv.Itoa(v.len)...)
-	bytes = append(bytes, '\r', '\n')
-	bytes = append(bytes, v.contents...)
-	return bytes
-}
-
-func (v *Value) marshallInteger() (bytes []byte) {
-	bytes = append(bytes, INTEGER)
-	bytes = append(bytes, strconv.Itoa(v.integer)...)
-	bytes = append(bytes, '\r', '\n')
-	return bytes
-}
-
-func (v *Value) marshalNull() []byte {
-	//Default
-	return []byte("$-1\r\n")
 }
