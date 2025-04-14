@@ -2,12 +2,15 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var ERRInvalidCommand = errors.New("ERR invalid command")
 
 const (
 	STRING  = '+'
@@ -203,9 +206,29 @@ func (w *Writer) Handler(v Value) error {
 		return w.config(args)
 	case "ECHO":
 		return w.echo(args)
+	default:
+		return w.Write(Value{typ: "string", str: ""})
 	}
+}
 
-	return nil
+func (w *Writer) HandleSlave(v Value) error {
+	command := strings.ToUpper(v.array[0].bulk)
+	args := v.array[1:]
+
+	valCopy := v
+	valcount := len(valCopy.Marshal())
+	offsetMu.Lock()
+	offset += valcount
+	offsetMu.Unlock()
+
+	switch command {
+	case "SET":
+		return w.set(v, args)
+	case "REPLCONF":
+		return w.replconf(args)
+	default:
+		return w.Write(Value{typ: "string", str: ""})
+	}
 }
 
 func (w *Writer) info(args []Value) error {
@@ -267,6 +290,9 @@ func (w *Writer) set(v Value, args []Value) error {
 	SETs[key] = value
 	SETsMu.Unlock()
 
+	if ConfigMap.IsSlave() {
+		return w.Write(Value{typ: "string", str: ""})
+	}
 	store = append(store, struct{}{})
 
 	//Progate writes

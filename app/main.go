@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"strings"
 	"sync"
 	"time"
 )
@@ -88,31 +87,14 @@ func main() {
 					continue
 				}
 
-				command := strings.ToUpper(value.array[0].bulk)
-				args := value.array[1:]
-
-				handle, ok := Handlers[command]
-				if !ok {
-					fmt.Println("Invalid command: ", command)
-					writer.Write(Value{typ: "string", str: ""})
-					continue
-				}
-
-				fmt.Println("From replica", value)
-				val := handle(args)
 				writer := NewWriter(conn)
-
-				if command == "REPLCONF" && strings.ToUpper(args[0].bulk) == "GETACK" {
-					writer.Write(val)
+				err = writer.HandleSlave(value)
+				if err != nil {
+					fmt.Println("Error writing to connection", err.Error())
+					return
 				}
+				continue
 
-				valCopy := value
-				valcount := len(valCopy.Marshal())
-				offsetMu.Lock()
-				offset += valcount
-				offsetMu.Unlock()
-
-				// writer.Write(writeAck())
 			}
 		}(conn)
 
@@ -158,46 +140,14 @@ func main() {
 					continue
 				}
 
-				// command := strings.ToUpper(value.array[0].bulk)
-				// args := value.array[1:]
-
 				writer := NewWriter(conn)
 
-				writer.Handler(value)
-
-				// handle, ok := Handlers[command]
-				// if !ok {
-				// 	fmt.Println("Invalid command: ", command)
-				// 	writer.Write(Value{typ: "string", str: ""})
-				// 	continue
-				// }
-
-				// result := handle(args)
-
-				// writer.Write(result)
-
-				// //Test propagation
-				// if command == "SET" {
-				// 	val := value
-				// 	multi := io.MultiWriter(connections...)
-				// 	_, err = multi.Write(val.Marshal())
-
-				// 	if err != nil {
-				// 		return
-				// 	}
-
-				// }
-
-				//Todo: refactor probably not the best way to do this
-
-				// if command == "PSYNC" {
-				// 	writer.Write(fullsync())
-
-				// 	connMu.Lock()
-				// 	connections = append(connections, conn)
-				// 	connMu.Unlock()
-				// }
-
+				err = writer.Handler(value)
+				if err != nil {
+					fmt.Println("Error writing to connection", err.Error())
+					return
+				}
+				continue
 			}
 		}(conn)
 	}
