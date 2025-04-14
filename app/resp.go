@@ -180,12 +180,23 @@ func NewWriter(w io.Writer) *Writer {
 func (w *Writer) Handler(v Value) error {
 	command := strings.ToUpper(v.array[0].bulk)
 	args := v.array[1:]
+
 	switch command {
 	case "PYNC":
 		return w.psync(args)
+	case "PING":
+		return w.ping(args)
 	}
 
 	return nil
+}
+
+func (w *Writer) ping(args []Value) error {
+	if len(args) == 0 {
+		w.Write(Value{typ: "string", str: "PONG"})
+	}
+
+	return w.Write(Value{typ: "string", str: args[0].bulk})
 }
 
 func (w *Writer) psync(args []Value) error {
@@ -198,8 +209,15 @@ func (w *Writer) psync(args []Value) error {
 
 	strOut := fmt.Sprintf("FULLRESYNC %s %s", id, offset)
 
-	w.Write(Value{typ: "string", str: strOut})
-	w.Write(fullsync())
+	err := w.Write(Value{typ: "string", str: strOut})
+	if err != nil {
+		return err
+	}
+
+	err = w.Write(fullsync())
+	if err != nil {
+		return err
+	}
 
 	connMu.Lock()
 	connections = append(connections, w.writer)
