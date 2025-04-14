@@ -677,7 +677,7 @@ func (w *Writer) xAdd(args []Value) Value {
 	vals := args[2:]
 	kvs := make([]MapKVs, 0)
 
-	err := w.validate(key, id)
+	err := w.validate(key, &id)
 	if err != nil {
 		return Value{typ: "error", str: err.Error()}
 	}
@@ -703,9 +703,29 @@ func (w *Writer) xAdd(args []Value) Value {
 	return Value{typ: "bulk", bulk: id}
 }
 
-func (w *Writer) validate(key string, id string) error {
-	split := strings.Split(id, "-")
+func (w *Writer) validate(key string, id *string) error {
+	split := strings.Split(*id, "-")
 	left, _ := strconv.Atoi(split[0])
+
+	if split[1] == "*" {
+		streamMu.RLock()
+		defer streamMu.RUnlock()
+		if topStream, ok := topStream[key]; ok {
+			tSplit := strings.Split(topStream, "-")
+			tl, _ := strconv.Atoi(tSplit[0])
+			tr, _ := strconv.Atoi(tSplit[1])
+
+			tr++
+			*id = strings.Join([]string{strconv.Itoa(tl), strconv.Itoa(tr)}, "-")
+			return nil
+		} else {
+			is := strings.Split(*id, "-")
+			l := is[0]
+
+			*id = strings.Join([]string{l, "0"}, "-")
+			return nil
+		}
+	}
 	right, _ := strconv.Atoi(split[1])
 
 	if left == 0 && right == 0 {
@@ -715,7 +735,7 @@ func (w *Writer) validate(key string, id string) error {
 	//if item exists in stream
 	streamMu.RLock()
 	defer streamMu.RUnlock()
-	if _, ok := stream[key][id]; ok {
+	if _, ok := stream[key][*id]; ok {
 		return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
 	}
 	//left side must not be less than top
