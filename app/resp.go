@@ -196,6 +196,8 @@ func (w *Writer) ping(args []Value) error {
 		w.Write(Value{typ: "string", str: "PONG"})
 	}
 
+	fmt.Println("this right here", args)
+
 	return w.Write(Value{typ: "string", str: args[0].bulk})
 }
 
