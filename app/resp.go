@@ -24,8 +24,9 @@ var (
 )
 
 var (
-	stream   = make(map[string]map[string][]MapKVs)
-	streamMu = sync.RWMutex{}
+	stream           = make(map[string]map[string][]MapKVs)
+	streamMu         = sync.RWMutex{}
+	topStream string = ""
 )
 
 var (
@@ -336,6 +337,7 @@ func (w *Writer) Handler(v Value) error {
 	case "ECHO":
 		return w.Write(w.echo(args))
 	case "XADD":
+		fmt.Println("xadd")
 		return w.Write(w.xAdd(args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
@@ -675,6 +677,11 @@ func (w *Writer) xAdd(args []Value) Value {
 	vals := args[2:]
 	kvs := make([]MapKVs, 0)
 
+	err := w.validate(key, id)
+	if err != nil {
+		return Value{typ: "error", str: err.Error()}
+	}
+
 	for i := 0; i < len(vals); i += 2 {
 		k := vals[i].bulk
 		if i+1 == len(vals) {
@@ -686,13 +693,49 @@ func (w *Writer) xAdd(args []Value) Value {
 	}
 
 	streamMu.Lock()
+	defer streamMu.Unlock()
 	if _, ok := stream[key]; !ok {
 		stream[key] = make(map[string][]MapKVs)
 	}
 	stream[key][id] = append(stream[key][id], kvs...)
-	streamMu.Unlock()
+	topStream = id
 
 	return Value{typ: "bulk", bulk: id}
+}
+
+func (w *Writer) validate(key string, id string) error {
+	split := strings.Split(id, "-")
+	left, _ := strconv.Atoi(split[0])
+	right, _ := strconv.Atoi(split[1])
+
+	if left == 0 && right == 0 {
+		return fmt.Errorf("ERR The ID specified in XADD must be greater than 0-0")
+	}
+
+	//if item exists in stream
+	streamMu.RLock()
+	defer streamMu.RUnlock()
+	if _, ok := stream[key][id]; ok {
+		return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+	}
+	//left side must not be less than top
+	if topStream != "" {
+		tSplit := strings.Split(topStream, "-")
+		tl, _ := strconv.Atoi(tSplit[0])
+		tr, _ := strconv.Atoi(tSplit[1])
+
+		if left < tl {
+			return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+		}
+
+		if left >= tl && right < tr {
+			return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+		}
+
+	}
+
+	//case for 0-1
+	return nil
 }
 
 // Write propagation
