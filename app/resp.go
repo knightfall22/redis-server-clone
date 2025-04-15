@@ -340,6 +340,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.xAdd(args))
 	case "XRANGE":
 		return w.Write(w.xrange(args))
+	case "XREAD":
+		return w.Write(w.xread(args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
 	}
@@ -668,6 +670,7 @@ func (w *Writer) echo(args []Value) Value {
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
+// TODO: Everthing here is overly complicated. Need to refactor with a radix DS
 func (w *Writer) xAdd(args []Value) Value {
 	if len(args) < 4 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xadd' command"}
@@ -768,6 +771,17 @@ func (w *Writer) xrange(args []Value) Value {
 	}
 
 	return ret
+}
+
+func (w *Writer) xread(args []Value) Value {
+	if len(args) < 3 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
+	}
+
+	key := args[1].bulk
+	id := args[2].bulk
+
+	return w.xrange([]Value{Value{typ: "bulk", bulk: key}, Value{typ: "bulk", bulk: id}, Value{typ: "bulk", bulk: "-"}})
 }
 
 func (w *Writer) validate(key string, id *string) error {
