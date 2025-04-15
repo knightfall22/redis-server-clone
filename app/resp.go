@@ -798,6 +798,7 @@ func (w *Writer) xread(args []Value) Value {
 		return Value{typ: "error", str: "ERR no such key"}
 	} else {
 		keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
+		outer := Value{typ: "array"}
 
 		for k, v := range str {
 			//Split the keys to get the timestamp and the index
@@ -816,7 +817,8 @@ func (w *Writer) xread(args []Value) Value {
 				}
 
 				val.array = append(val.array, vArr)
-				keyVal.array = append(keyVal.array, val)
+				outer.array = append(outer.array, val)
+				keyVal.array = append(keyVal.array, outer)
 			}
 		}
 
