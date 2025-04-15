@@ -707,31 +707,38 @@ func (w *Writer) validate(key string, id *string) error {
 	split := strings.Split(*id, "-")
 	left, _ := strconv.Atoi(split[0])
 
+	//TODO: FIX ERROR HERE
 	if split[1] == "*" {
 		streamMu.RLock()
 		defer streamMu.RUnlock()
 		if topStream, ok := topStream[key]; ok {
 			tSplit := strings.Split(topStream, "-")
-			// tl, _ := strconv.Atoi(tSplit[0])
+			tl, _ := strconv.Atoi(tSplit[0])
 			tr, _ := strconv.Atoi(tSplit[1])
+
+			if left < tl {
+				return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+			} else if left > tl {
+				tl = left
+			}
 
 			tr++
 
-			*id = strings.Join([]string{strconv.Itoa(left), strconv.Itoa(tr)}, "-")
+			*id = strings.Join([]string{strconv.Itoa(tl), strconv.Itoa(tr)}, "-")
 			return nil
 		} else {
-			is := strings.Split(*id, "-")
-			l := is[0]
+			IDSplit := strings.Split(*id, "-")
+			l := IDSplit[0]
 			r := 0
 
-			if left == 0 {
+			if l == "0" {
 				r++
 			}
 
 			fmt.Println("line", l)
 			fmt.Println("right", r)
 
-			*id = strings.Join([]string{strconv.Itoa(left), strconv.Itoa(r)}, "-")
+			*id = strings.Join([]string{l, strconv.Itoa(r)}, "-")
 			return nil
 		}
 	}
