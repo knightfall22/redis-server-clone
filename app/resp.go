@@ -720,6 +720,7 @@ func (w *Writer) validate(key string, id *string) error {
 				return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
 			} else if left > tl {
 				tl = left
+				tr = 0
 			} else {
 				tr++
 			}
