@@ -337,8 +337,9 @@ func (w *Writer) Handler(v Value) error {
 	case "ECHO":
 		return w.Write(w.echo(args))
 	case "XADD":
-		fmt.Println("xadd")
 		return w.Write(w.xAdd(args))
+	case "XRANGE":
+		return w.Write(w.xrange(args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
 	}
@@ -701,6 +702,64 @@ func (w *Writer) xAdd(args []Value) Value {
 	topStream[key] = id
 
 	return Value{typ: "bulk", bulk: id}
+}
+
+func (w *Writer) xrange(args []Value) Value {
+	if len(args) < 3 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'xrange' command"}
+	}
+
+	ret := Value{typ: "array"}
+
+	key := args[0].bulk
+	s := args[1].bulk
+	e := args[2].bulk
+
+	sSpilit := strings.Split(s, "-")
+	eSplit := strings.Split(e, "-")
+
+	if len(sSpilit) != 2 {
+		sSpilit = append(sSpilit, "0")
+	}
+
+	if len(eSplit) != 2 {
+		eSplit = append(eSplit, "18446744073709551615")
+	}
+
+	sLeft, _ := strconv.Atoi(sSpilit[0])
+	sRight, _ := strconv.Atoi(sSpilit[1])
+
+	eLeft, _ := strconv.Atoi(eSplit[0])
+	eRight, _ := strconv.Atoi(eSplit[1])
+
+	streamMu.RLock()
+	defer streamMu.RUnlock()
+
+	if streamRes, ok := stream[key]; !ok {
+		return Value{typ: "error", str: "ERR no such key"}
+	} else {
+		for k, v := range streamRes {
+			//Split the keys to get the timestamp and the index
+			kSplit := strings.Split(k, "-")
+			left, _ := strconv.Atoi(kSplit[0])
+			right, _ := strconv.Atoi(kSplit[1])
+
+			if left >= sLeft && right >= sRight && left <= eLeft && right <= eRight {
+				val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
+
+				vArr := Value{typ: "array"}
+				for _, av := range v {
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+				}
+
+				val.array = append(val.array, vArr)
+				ret.array = append(ret.array, val)
+			}
+		}
+	}
+
+	return ret
 }
 
 func (w *Writer) validate(key string, id *string) error {
