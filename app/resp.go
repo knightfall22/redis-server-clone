@@ -778,10 +778,52 @@ func (w *Writer) xread(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
 	}
 
+	ret := Value{typ: "array"}
+
 	key := args[1].bulk
 	id := args[2].bulk
 
-	return w.xrange([]Value{Value{typ: "bulk", bulk: key}, Value{typ: "bulk", bulk: id}, Value{typ: "bulk", bulk: "-"}})
+	IDSplit := strings.Split(id, "-")
+
+	if len(IDSplit) != 2 {
+		IDSplit = append(IDSplit, "0")
+	}
+
+	idLeft, _ := strconv.Atoi(IDSplit[0])
+	idRight, _ := strconv.Atoi(IDSplit[1])
+
+	streamMu.RLock()
+	defer streamMu.RUnlock()
+	if str, ok := stream[key]; !ok {
+		return Value{typ: "error", str: "ERR no such key"}
+	} else {
+		keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
+
+		for k, v := range str {
+			//Split the keys to get the timestamp and the index
+			kSplit := strings.Split(k, "-")
+			left, _ := strconv.Atoi(kSplit[0])
+			right, _ := strconv.Atoi(kSplit[1])
+
+			if left >= idLeft && right >= idRight && left <= idLeft && right <= idRight {
+				val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
+
+				vArr := Value{typ: "array"}
+				for _, av := range v {
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+				}
+
+				val.array = append(val.array, vArr)
+				keyVal.array = append(keyVal.array, val)
+			}
+		}
+
+		ret.array = append(ret.array, keyVal)
+	}
+
+	return ret
+
 }
 
 func (w *Writer) validate(key string, id *string) error {
