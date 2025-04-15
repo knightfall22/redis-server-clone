@@ -805,7 +805,8 @@ func (w *Writer) xread(args []Value) Value {
 			left, _ := strconv.Atoi(kSplit[0])
 			right, _ := strconv.Atoi(kSplit[1])
 
-			if left >= idLeft && right >= idRight && left <= idLeft && right <= idRight {
+			if left >= idLeft && right >= idRight {
+				fmt.Println(k)
 				val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
 
 				vArr := Value{typ: "array"}
