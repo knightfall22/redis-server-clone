@@ -704,10 +704,36 @@ func (w *Writer) xAdd(args []Value) Value {
 }
 
 func (w *Writer) validate(key string, id *string) error {
+
+	//case for automatic id
+	if *id == "*" {
+		miliTime := time.Now().UnixMilli()
+
+		streamMu.RLock()
+		defer streamMu.RUnlock()
+		if topStream, ok := topStream[key]; ok {
+			tSplit := strings.Split(topStream, "-")
+			tl, _ := strconv.Atoi(tSplit[0])
+			tr, _ := strconv.Atoi(tSplit[1])
+
+			if miliTime < int64(tl) {
+				return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+			} else if miliTime == int64(tl) {
+				tr++
+			}
+
+			*id = strings.Join([]string{strconv.Itoa(int(miliTime)), strconv.Itoa(tr)}, "-")
+		} else {
+			*id = strings.Join([]string{strconv.Itoa(int(miliTime)), strconv.Itoa(0)}, "-")
+		}
+
+		return nil
+	}
+
 	split := strings.Split(*id, "-")
 	left, _ := strconv.Atoi(split[0])
 
-	//TODO: FIX ERROR HERE
+	//Partial Id case
 	if split[1] == "*" {
 		streamMu.RLock()
 		defer streamMu.RUnlock()
@@ -736,13 +762,11 @@ func (w *Writer) validate(key string, id *string) error {
 				r++
 			}
 
-			fmt.Println("line", l)
-			fmt.Println("right", r)
-
 			*id = strings.Join([]string{l, strconv.Itoa(r)}, "-")
 			return nil
 		}
 	}
+
 	right, _ := strconv.Atoi(split[1])
 
 	if left == 0 && right == 0 {
