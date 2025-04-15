@@ -737,7 +737,7 @@ func (w *Writer) xrange(args []Value) Value {
 	sLeft, _ := strconv.Atoi(sSpilit[0])
 	sRight, _ := strconv.Atoi(sSpilit[1])
 
-	if e == "-" {
+	if e == "+" {
 		sSpilit[0] = "18446744073709551615"
 	}
 	eLeft, _ := strconv.Atoi(eSplit[0])
