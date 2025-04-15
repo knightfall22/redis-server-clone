@@ -720,9 +720,9 @@ func (w *Writer) validate(key string, id *string) error {
 				return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
 			} else if left > tl {
 				tl = left
+			} else {
+				tr++
 			}
-
-			tr++
 
 			*id = strings.Join([]string{strconv.Itoa(tl), strconv.Itoa(tr)}, "-")
 			return nil
