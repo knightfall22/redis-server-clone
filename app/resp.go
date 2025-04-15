@@ -777,54 +777,70 @@ func (w *Writer) xread(args []Value) Value {
 	if len(args) < 3 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
 	}
+	if len(args[1:])%2 != 0 {
+		return Value{typ: "error", str: "ERR Unbalanced 'xread' list of streams: for each stream key an ID or '$' must be specified"}
+	}
+
+	keyLen := len(args[1:]) / 2
+	keys := make([]string, keyLen)
+
+	for i := 0; i < keyLen; i++ {
+		fmt.Println("hello angel", args[1+i])
+		keys[i] = args[1+i].bulk
+	}
+
+	//Todo: verify ids
 
 	ret := Value{typ: "array"}
 
-	key := args[1].bulk
-	id := args[2].bulk
-
-	IDSplit := strings.Split(id, "-")
-
-	if len(IDSplit) != 2 {
-		IDSplit = append(IDSplit, "0")
-	}
-
-	idLeft, _ := strconv.Atoi(IDSplit[0])
-	idRight, _ := strconv.Atoi(IDSplit[1])
+	// key := args[1].bulk
+	ids := args[keyLen+1:]
 
 	streamMu.RLock()
 	defer streamMu.RUnlock()
-	if str, ok := stream[key]; !ok {
-		return Value{typ: "error", str: "ERR no such key"}
-	} else {
-		keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
-		outer := Value{typ: "array"}
 
-		for k, v := range str {
-			//Split the keys to get the timestamp and the index
-			kSplit := strings.Split(k, "-")
-			left, _ := strconv.Atoi(kSplit[0])
-			right, _ := strconv.Atoi(kSplit[1])
+	var counter int
+	for i, key := range keys {
+		if str, ok := stream[key]; !ok {
+			counter++
+			continue
+		} else {
+			keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
+			outer := Value{typ: "array"}
 
-			if left >= idLeft && right >= idRight {
-				fmt.Println(k)
-				val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
+			for k, v := range str {
+				//Split the keys to get the timestamp and the index
+				kSplit := strings.Split(k, "-")
+				left, _ := strconv.Atoi(kSplit[0])
+				right, _ := strconv.Atoi(kSplit[1])
 
-				vArr := Value{typ: "array"}
-				for _, av := range v {
-					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
-					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+				idSplit := strings.Split(ids[i].bulk, "-")
+				idLeft, _ := strconv.Atoi(idSplit[0])
+				idRight, _ := strconv.Atoi(idSplit[1])
+
+				if left >= idLeft && right >= idRight {
+					fmt.Println(k)
+					val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
+
+					vArr := Value{typ: "array"}
+					for _, av := range v {
+						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
+						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+					}
+
+					val.array = append(val.array, vArr)
+					outer.array = append(outer.array, val)
+					keyVal.array = append(keyVal.array, outer)
 				}
-
-				val.array = append(val.array, vArr)
-				outer.array = append(outer.array, val)
-				keyVal.array = append(keyVal.array, outer)
 			}
-		}
 
-		ret.array = append(ret.array, keyVal)
+			ret.array = append(ret.array, keyVal)
+		}
 	}
 
+	if counter == keyLen {
+		return Value{typ: "null"}
+	}
 	return ret
 
 }
