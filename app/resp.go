@@ -709,6 +709,7 @@ func (w *Writer) xrange(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xrange' command"}
 	}
 
+	// var sLeft, sRight, eLeft, eRight int
 	ret := Value{typ: "array"}
 
 	key := args[0].bulk
@@ -724,6 +725,10 @@ func (w *Writer) xrange(args []Value) Value {
 
 	if len(eSplit) != 2 {
 		eSplit = append(eSplit, "18446744073709551615")
+	}
+
+	if s == "-" {
+		sSpilit[0] = "0"
 	}
 
 	sLeft, _ := strconv.Atoi(sSpilit[0])
