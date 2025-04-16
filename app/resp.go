@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	iradix "github.com/hashicorp/go-immutable-radix/v2"
 )
 
 var ERRInvalidCommand = errors.New("ERR invalid command")
@@ -23,8 +25,13 @@ var (
 	SETsMu = sync.RWMutex{}
 )
 
+type MapKVs struct {
+	Key   string
+	Value string
+}
+
 var (
-	stream    = make(map[string]map[string][]MapKVs)
+	stream    = map[string]*iradix.Tree[[]MapKVs]{}
 	streamMu  = sync.RWMutex{}
 	topStream = make(map[string]string)
 )
@@ -42,11 +49,6 @@ const (
 	BULK    = '$'
 	INTEGER = ':'
 )
-
-type MapKVs struct {
-	Key   string
-	Value string
-}
 
 type Value struct {
 	typ      string
@@ -340,8 +342,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.xAdd(args))
 	case "XRANGE":
 		return w.Write(w.xrange(args))
-	case "XREAD":
-		return w.Write(w.xread(args))
+	// case "XREAD":
+	// 	return w.Write(w.xread(args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
 	}
@@ -699,10 +701,9 @@ func (w *Writer) xAdd(args []Value) Value {
 	streamMu.Lock()
 	defer streamMu.Unlock()
 	if _, ok := stream[key]; !ok {
-		stream[key] = make(map[string][]MapKVs)
+		stream[key] = iradix.New[[]MapKVs]()
 	}
-	stream[key][id] = append(stream[key][id], kvs...)
-	topStream[key] = id
+	stream[key], _, _ = stream[key].Insert([]byte(id), kvs)
 
 	return Value{typ: "bulk", bulk: id}
 }
@@ -712,138 +713,124 @@ func (w *Writer) xrange(args []Value) Value {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xrange' command"}
 	}
 
-	// var sLeft, sRight, eLeft, eRight int
 	ret := Value{typ: "array"}
 
 	key := args[0].bulk
 	s := args[1].bulk
 	e := args[2].bulk
 
-	sSpilit := strings.Split(s, "-")
-	eSplit := strings.Split(e, "-")
-
-	if len(sSpilit) != 2 {
-		sSpilit = append(sSpilit, "0")
-	}
-
-	if len(eSplit) != 2 {
-		eSplit = append(eSplit, "18446744073709551615")
-	}
-
 	if s == "-" {
-		sSpilit[0] = "0"
+		s = "0"
 	}
-
-	sLeft, _ := strconv.Atoi(sSpilit[0])
-	sRight, _ := strconv.Atoi(sSpilit[1])
-
-	if e == "+" {
-		sSpilit[0] = "18446744073709551615"
-	}
-	eLeft, _ := strconv.Atoi(eSplit[0])
-	eRight, _ := strconv.Atoi(eSplit[1])
 
 	streamMu.RLock()
 	defer streamMu.RUnlock()
 
-	if streamRes, ok := stream[key]; !ok {
+	if streamTree, ok := stream[key]; !ok {
 		return Value{typ: "error", str: "ERR no such key"}
 	} else {
-		for k, v := range streamRes {
-			//Split the keys to get the timestamp and the index
-			kSplit := strings.Split(k, "-")
-			left, _ := strconv.Atoi(kSplit[0])
-			right, _ := strconv.Atoi(kSplit[1])
+		it := streamTree.Root().Iterator()
+		it.SeekLowerBound([]byte(s))
 
-			if left >= sLeft && right >= sRight && left <= eLeft && right <= eRight {
-				val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
+		top, _, _ := streamTree.Root().Maximum()
 
-				vArr := Value{typ: "array"}
-				for _, av := range v {
-					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
-					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
-				}
-
-				val.array = append(val.array, vArr)
-				ret.array = append(ret.array, val)
+		for key, treeVals, ok := it.Next(); ok; key, treeVals, ok = it.Next() {
+			if e == "+" {
+				e = string(top)
 			}
+
+			val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: string(key)}}}
+
+			vArr := Value{typ: "array"}
+			for _, av := range treeVals {
+				vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
+				vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+			}
+
+			val.array = append(val.array, vArr)
+			ret.array = append(ret.array, val)
+
+			if string(key) == e {
+				break
+			}
+
 		}
 	}
 
 	return ret
 }
 
-func (w *Writer) xread(args []Value) Value {
-	if len(args) < 3 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
-	}
-	if len(args[1:])%2 != 0 {
-		return Value{typ: "error", str: "ERR Unbalanced 'xread' list of streams: for each stream key an ID or '$' must be specified"}
-	}
+// func (w *Writer) xread(args []Value) Value {
+// 	if len(args) < 3 {
+// 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
+// 	}
+// 	if len(args[1:])%2 != 0 {
+// 		return Value{typ: "error", str: "ERR Unbalanced 'xread' list of streams: for each stream key an ID or '$' must be specified"}
+// 	}
 
-	keyLen := len(args[1:]) / 2
-	keys := make([]string, keyLen)
+// 	keyLen := len(args[1:]) / 2
+// 	keys := make([]string, keyLen)
 
-	for i := 0; i < keyLen; i++ {
-		fmt.Println("hello angel", args[1+i])
-		keys[i] = args[1+i].bulk
-	}
+// 	for i := 0; i < keyLen; i++ {
+// 		fmt.Println("hello angel", args[1+i])
+// 		keys[i] = args[1+i].bulk
+// 	}
 
-	//Todo: verify ids
+// 	//Todo: verify ids
 
-	ret := Value{typ: "array"}
+// 	ret := Value{typ: "array"}
 
-	// key := args[1].bulk
-	ids := args[keyLen+1:]
+// 	// key := args[1].bulk
+// 	ids := args[keyLen+1:]
 
-	streamMu.RLock()
-	defer streamMu.RUnlock()
+// 	streamMu.RLock()
+// 	defer streamMu.RUnlock()
 
-	var counter int
-	for i, key := range keys {
-		if str, ok := stream[key]; !ok {
-			counter++
-			continue
-		} else {
-			keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
-			outer := Value{typ: "array"}
+// 	var counter int
+// 	for i, key := range keys {
+// 		if str, ok := stream[key]; !ok {
+// 			counter++
+// 			continue
+// 		} else {
+// 			keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
+// 			outer := Value{typ: "array"}
 
-			for k, v := range str {
-				//Split the keys to get the timestamp and the index
-				kSplit := strings.Split(k, "-")
-				left, _ := strconv.Atoi(kSplit[0])
-				right, _ := strconv.Atoi(kSplit[1])
+// 			for k, v := range str {
+// 				//Split the keys to get the timestamp and the index
+// 				kSplit := strings.Split(k, "-")
+// 				left, _ := strconv.Atoi(kSplit[0])
+// 				right, _ := strconv.Atoi(kSplit[1])
 
-				idSplit := strings.Split(ids[i].bulk, "-")
-				idLeft, _ := strconv.Atoi(idSplit[0])
-				idRight, _ := strconv.Atoi(idSplit[1])
+// 				idSplit := strings.Split(ids[i].bulk, "-")
+// 				idLeft, _ := strconv.Atoi(idSplit[0])
+// 				idRight, _ := strconv.Atoi(idSplit[1])
 
-				if left >= idLeft && right >= idRight {
-					fmt.Println(k)
-					val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
+// 				if left >= idLeft && right >= idRight {
+// 					fmt.Println(k)
+// 					val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
 
-					vArr := Value{typ: "array"}
-					for _, av := range v {
-						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
-						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
-					}
+// 					vArr := Value{typ: "array"}
+// 					for _, av := range v {
+// 						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
+// 						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+// 					}
 
-					val.array = append(val.array, vArr)
-					outer.array = append(outer.array, val)
-					keyVal.array = append(keyVal.array, outer)
-				}
-			}
+// 					val.array = append(val.array, vArr)
+// 					outer.array = append(outer.array, val)
+// 					keyVal.array = append(keyVal.array, outer)
+// 				}
+// 			}
 
-			ret.array = append(ret.array, keyVal)
-		}
-	}
+// 			ret.array = append(ret.array, keyVal)
+// 		}
+// 	}
 
-	if counter == keyLen {
-		return Value{typ: "null"}
-	}
-	return ret
+// 	if counter == keyLen {
+// 		return Value{typ: "null"}
+// 	}
+// 	return ret
 
-}
+// }
 
 func (w *Writer) validate(key string, id *string) error {
 
@@ -853,8 +840,11 @@ func (w *Writer) validate(key string, id *string) error {
 
 		streamMu.RLock()
 		defer streamMu.RUnlock()
-		if topStream, ok := topStream[key]; ok {
-			tSplit := strings.Split(topStream, "-")
+
+		if streamTree, ok := stream[key]; ok {
+			key, _, _ := streamTree.Root().Maximum()
+
+			tSplit := strings.Split(string(key), "-")
 			tl, _ := strconv.Atoi(tSplit[0])
 			tr, _ := strconv.Atoi(tSplit[1])
 
@@ -873,14 +863,19 @@ func (w *Writer) validate(key string, id *string) error {
 	}
 
 	split := strings.Split(*id, "-")
-	left, _ := strconv.Atoi(split[0])
+	left, err := strconv.Atoi(split[0])
+
+	if err != nil {
+		return fmt.Errorf("ERR The ID specified in XADD is invalid")
+	}
 
 	//Partial Id case
 	if split[1] == "*" {
 		streamMu.RLock()
 		defer streamMu.RUnlock()
-		if topStream, ok := topStream[key]; ok {
-			tSplit := strings.Split(topStream, "-")
+		if streamTree, ok := stream[key]; ok {
+			key, _, _ := streamTree.Root().Maximum()
+			tSplit := strings.Split(string(key), "-")
 			tl, _ := strconv.Atoi(tSplit[0])
 			tr, _ := strconv.Atoi(tSplit[1])
 
@@ -909,7 +904,10 @@ func (w *Writer) validate(key string, id *string) error {
 		}
 	}
 
-	right, _ := strconv.Atoi(split[1])
+	right, err := strconv.Atoi(split[1])
+	if err != nil {
+		return fmt.Errorf("ERR The ID specified in XADD is invalid")
+	}
 
 	if left == 0 && right == 0 {
 		return fmt.Errorf("ERR The ID specified in XADD must be greater than 0-0")
@@ -918,12 +916,18 @@ func (w *Writer) validate(key string, id *string) error {
 	//if item exists in stream
 	streamMu.RLock()
 	defer streamMu.RUnlock()
-	if _, ok := stream[key][*id]; ok {
-		return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+	if streamTree, ok := stream[key]; ok {
+		key, _, _ := streamTree.Root().Maximum()
+		if string(key) == *id {
+
+			return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+		}
+
 	}
 	//left side must not be less than top
-	if topStream, ok := topStream[key]; ok {
-		tSplit := strings.Split(topStream, "-")
+	if streamTree, ok := stream[key]; ok {
+		key, _, _ := streamTree.Root().Maximum()
+		tSplit := strings.Split(string(key), "-")
 		tl, _ := strconv.Atoi(tSplit[0])
 		tr, _ := strconv.Atoi(tSplit[1])
 
