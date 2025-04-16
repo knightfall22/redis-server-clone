@@ -342,8 +342,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.xAdd(args))
 	case "XRANGE":
 		return w.Write(w.xrange(args))
-	// case "XREAD":
-	// 	return w.Write(w.xread(args))
+	case "XREAD":
+		return w.Write(w.xread(args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
 	}
@@ -760,77 +760,96 @@ func (w *Writer) xrange(args []Value) Value {
 	return ret
 }
 
-// func (w *Writer) xread(args []Value) Value {
-// 	if len(args) < 3 {
-// 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
-// 	}
-// 	if len(args[1:])%2 != 0 {
-// 		return Value{typ: "error", str: "ERR Unbalanced 'xread' list of streams: for each stream key an ID or '$' must be specified"}
-// 	}
+func (w *Writer) xread(args []Value) Value {
+	if len(args) < 3 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
+	}
 
-// 	keyLen := len(args[1:]) / 2
-// 	keys := make([]string, keyLen)
+	//Read block
+	if strings.ToUpper(args[0].bulk) != "block" {
+		blockTime, err := strconv.Atoi(args[1].bulk)
 
-// 	for i := 0; i < keyLen; i++ {
-// 		fmt.Println("hello angel", args[1+i])
-// 		keys[i] = args[1+i].bulk
-// 	}
+		if err != nil {
+			return Value{typ: "error", str: "ERR invalid block time"}
+		}
 
-// 	//Todo: verify ids
+		time.Sleep(time.Duration(blockTime) * time.Millisecond)
+		args = args[2:]
+	}
 
-// 	ret := Value{typ: "array"}
+	if len(args[1:])%2 != 0 {
+		return Value{typ: "error", str: "ERR Unbalanced 'xread' list of streams: for each stream key an ID or '$' must be specified"}
+	}
 
-// 	// key := args[1].bulk
-// 	ids := args[keyLen+1:]
+	keyLen := len(args[1:]) / 2
+	keys := make([]string, keyLen)
 
-// 	streamMu.RLock()
-// 	defer streamMu.RUnlock()
+	for i := 0; i < keyLen; i++ {
+		fmt.Println("hello angel", args[1+i])
+		keys[i] = args[1+i].bulk
+	}
 
-// 	var counter int
-// 	for i, key := range keys {
-// 		if str, ok := stream[key]; !ok {
-// 			counter++
-// 			continue
-// 		} else {
-// 			keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
-// 			outer := Value{typ: "array"}
+	//Todo: verify ids
 
-// 			for k, v := range str {
-// 				//Split the keys to get the timestamp and the index
-// 				kSplit := strings.Split(k, "-")
-// 				left, _ := strconv.Atoi(kSplit[0])
-// 				right, _ := strconv.Atoi(kSplit[1])
+	ret := Value{typ: "array"}
 
-// 				idSplit := strings.Split(ids[i].bulk, "-")
-// 				idLeft, _ := strconv.Atoi(idSplit[0])
-// 				idRight, _ := strconv.Atoi(idSplit[1])
+	// key := args[1].bulk
+	ids := args[keyLen+1:]
 
-// 				if left >= idLeft && right >= idRight {
-// 					fmt.Println(k)
-// 					val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: k}}}
+	streamMu.RLock()
+	defer streamMu.RUnlock()
 
-// 					vArr := Value{typ: "array"}
-// 					for _, av := range v {
-// 						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
-// 						vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
-// 					}
+	var counter int
+	for i, key := range keys {
+		if streamTree, ok := stream[key]; !ok {
+			counter++
+			continue
+		} else {
+			keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: key}}}
+			outer := Value{typ: "array"}
+			id := ids[i].bulk
 
-// 					val.array = append(val.array, vArr)
-// 					outer.array = append(outer.array, val)
-// 					keyVal.array = append(keyVal.array, outer)
-// 				}
-// 			}
+			fmt.Println("id", id)
+			it := streamTree.Root().Iterator()
+			it.SeekLowerBound([]byte(id))
+			top, _, _ := streamTree.Root().Maximum()
 
-// 			ret.array = append(ret.array, keyVal)
-// 		}
-// 	}
+			for treekey, treeVals, ok := it.Next(); ok; treekey, treeVals, ok = it.Next() {
 
-// 	if counter == keyLen {
-// 		return Value{typ: "null"}
-// 	}
-// 	return ret
+				if string(treekey) == id {
+					continue
+				}
 
-// }
+				fmt.Println("key", string(treekey))
+				fmt.Println("key", treeVals)
+				val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: string(treekey)}}}
+
+				vArr := Value{typ: "array"}
+				for _, av := range treeVals {
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+				}
+
+				val.array = append(val.array, vArr)
+				outer.array = append(outer.array, val)
+
+				if string(key) == string(top) {
+					break
+				}
+
+			}
+
+			keyVal.array = append(keyVal.array, outer)
+			ret.array = append(ret.array, keyVal)
+		}
+	}
+
+	if counter == keyLen {
+		return Value{typ: "null"}
+	}
+	return ret
+
+}
 
 func (w *Writer) validate(key string, id *string) error {
 
