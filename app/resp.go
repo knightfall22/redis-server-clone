@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +14,9 @@ import (
 
 	iradix "github.com/hashicorp/go-immutable-radix/v2"
 )
+
+var signalSearch = make(chan []byte)
+var available = make(chan []byte)
 
 var ERRInvalidCommand = errors.New("ERR invalid command")
 
@@ -30,8 +35,14 @@ type MapKVs struct {
 	Value string
 }
 
+type WatchEvent struct {
+	stream string
+	id     string
+}
+
 var (
 	stream    = map[string]*iradix.Tree[[]MapKVs]{}
+	watchers  = make(map[string]map[string][]chan WatchEvent)
 	streamMu  = sync.RWMutex{}
 	topStream = make(map[string]string)
 )
@@ -547,11 +558,8 @@ func (w *Writer) wait(args []Value) Value {
 	}
 
 	if len(store) == 0 {
-		fmt.Println("I do not think you can exist --not truly anyway")
 		return Value{typ: "integer", integer: len(connections)}
 	}
-
-	fmt.Println("Who are you to tell me what I can or can't be")
 
 	acks := writeGetAck()
 	err := w.propagate(acks)
@@ -565,7 +573,6 @@ func (w *Writer) wait(args []Value) Value {
 	timer := time.After(time.Duration(t) * time.Millisecond)
 	var ackBoi int
 
-	fmt.Printf("the number doth haunt my dreams: (%d) (%d)\n", desired, t)
 loop:
 	for {
 		select {
@@ -672,14 +679,13 @@ func (w *Writer) echo(args []Value) Value {
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
-// TODO: Everthing here is overly complicated. Need to refactor with a radix DS
 func (w *Writer) xAdd(args []Value) Value {
 	if len(args) < 4 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xadd' command"}
 	}
 
-	key := args[0].bulk
-	id := args[1].bulk
+	key := args[0].bulk // stream
+	id := args[1].bulk  // stream id
 	vals := args[2:]
 	kvs := make([]MapKVs, 0)
 
@@ -704,6 +710,22 @@ func (w *Writer) xAdd(args []Value) Value {
 		stream[key] = iradix.New[[]MapKVs]()
 	}
 	stream[key], _, _ = stream[key].Insert([]byte(id), kvs)
+
+	//Notify all watchers of an id if inserted id is lexicographically greater
+	if prefixes, ok := watchers[key]; ok {
+		for k, _ := range prefixes {
+			//if key are lexigraphically greater
+			if bytes.Compare([]byte(id), []byte(k)) == 1 {
+				for _, ch := range prefixes[k] {
+					fmt.Println("Lexi", WatchEvent{stream: key, id: id})
+					ch <- WatchEvent{stream: key, id: id}
+					break
+				}
+			}
+		}
+
+		delete(watchers, key) //cleanup
+	}
 
 	return Value{typ: "bulk", bulk: id}
 }
@@ -764,16 +786,15 @@ func (w *Writer) xread(args []Value) Value {
 	if len(args) < 3 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
 	}
-
+	var blockTime int
 	//Read block
-	if strings.ToUpper(args[0].bulk) != "block" {
-		blockTime, err := strconv.Atoi(args[1].bulk)
-
+	if strings.ToUpper(args[0].bulk) == "BLOCK" {
+		time, err := strconv.Atoi(args[1].bulk)
 		if err != nil {
 			return Value{typ: "error", str: "ERR invalid block time"}
 		}
 
-		time.Sleep(time.Duration(blockTime) * time.Millisecond)
+		blockTime = time
 		args = args[2:]
 	}
 
@@ -796,9 +817,86 @@ func (w *Writer) xread(args []Value) Value {
 	// key := args[1].bulk
 	ids := args[keyLen+1:]
 
-	streamMu.RLock()
-	defer streamMu.RUnlock()
+	//Explanation the reason why locks and unlocks are peformed in this manner is because we need to free
+	//up the resource so that it can be used in the `xadd` function. Note: Might not be the best way to do this
+	if blockTime != 0 {
+		streamMu.Lock()
+		var exists bool
+		//If blocktime is not 0 but key exists proceed in any of the provided trees proceed as now
+		for i, key := range keys {
+			if streamTree, ok := stream[key]; ok {
+				prefix := []byte(ids[i].bulk)
+				it := streamTree.Root().Iterator()
+				it.SeekLowerBound(prefix)
+				fmt.Println(prefix)
 
+				for tKey, _, ok := it.Next(); ok; tKey, _, ok = it.Next() {
+					if bytes.Compare(tKey, prefix) == 1 {
+						exists = true
+						break
+					}
+				}
+			}
+		}
+		streamMu.Unlock()
+
+		//if non of the requested ids exists
+		if !exists {
+			streamMu.Lock()
+			chans := make([]chan WatchEvent, 0)
+
+			//set up watch
+			for i, v := range keys {
+				if _, ok := watchers[v]; !ok {
+					watchers[v] = make(map[string][]chan WatchEvent)
+				}
+
+				keyId := ids[i].bulk
+				ch := make(chan WatchEvent, 1)
+				watchers[v][keyId] = append(watchers[v][keyId], ch)
+				chans = append(chans, ch)
+			}
+			streamMu.Unlock()
+
+			duration := time.Duration(blockTime * int(time.Millisecond))
+			ctx, cancel := context.WithTimeout(context.Background(), duration)
+			defer cancel()
+
+			select {
+			case res := <-mergeChans(ctx, chans):
+				fmt.Println("from block", res)
+				cancel()
+
+				//transform into appropriate return value:
+				//first get the item from the tree
+				tree := stream[res.stream]
+				kvArr, _ := tree.Get([]byte(res.id))
+
+				keyVal := Value{typ: "array", array: []Value{{typ: "bulk", bulk: res.stream}}}
+				outer := Value{typ: "array"}
+
+				treeKey := Value{typ: "array", array: []Value{{typ: "bulk", bulk: res.id}}}
+
+				vArr := Value{typ: "array"}
+				for _, av := range kvArr {
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Key})
+					vArr.array = append(vArr.array, Value{typ: "bulk", bulk: av.Value})
+				}
+
+				treeKey.array = append(treeKey.array, vArr)
+				outer.array = append(outer.array, treeKey)
+				keyVal.array = append(keyVal.array, outer)
+				ret.array = append(ret.array, keyVal)
+				return ret
+			case <-ctx.Done():
+				return Value{typ: "null"}
+			}
+		}
+
+	}
+
+	streamMu.Lock()
+	defer streamMu.Unlock()
 	var counter int
 	for i, key := range keys {
 		if streamTree, ok := stream[key]; !ok {
@@ -809,7 +907,6 @@ func (w *Writer) xread(args []Value) Value {
 			outer := Value{typ: "array"}
 			id := ids[i].bulk
 
-			fmt.Println("id", id)
 			it := streamTree.Root().Iterator()
 			it.SeekLowerBound([]byte(id))
 			top, _, _ := streamTree.Root().Maximum()
@@ -820,8 +917,6 @@ func (w *Writer) xread(args []Value) Value {
 					continue
 				}
 
-				fmt.Println("key", string(treekey))
-				fmt.Println("key", treeVals)
 				val := Value{typ: "array", array: []Value{{typ: "bulk", bulk: string(treekey)}}}
 
 				vArr := Value{typ: "array"}
@@ -833,9 +928,10 @@ func (w *Writer) xread(args []Value) Value {
 				val.array = append(val.array, vArr)
 				outer.array = append(outer.array, val)
 
-				if string(key) == string(top) {
-					break
-				}
+				_ = top
+				// if string(key) == string(top) {
+				// 	break
+				// }
 
 			}
 
@@ -852,7 +948,6 @@ func (w *Writer) xread(args []Value) Value {
 }
 
 func (w *Writer) validate(key string, id *string) error {
-
 	//case for automatic id
 	if *id == "*" {
 		miliTime := time.Now().UnixMilli()
@@ -895,8 +990,11 @@ func (w *Writer) validate(key string, id *string) error {
 		if streamTree, ok := stream[key]; ok {
 			key, _, _ := streamTree.Root().Maximum()
 			tSplit := strings.Split(string(key), "-")
+			fmt.Println(string(key))
 			tl, _ := strconv.Atoi(tSplit[0])
 			tr, _ := strconv.Atoi(tSplit[1])
+
+			//TODO: Fix the tr not above 10 issue
 
 			if left < tl {
 				return fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
@@ -904,6 +1002,7 @@ func (w *Writer) validate(key string, id *string) error {
 				tl = left
 				tr = 0
 			} else {
+
 				tr++
 			}
 
@@ -969,4 +1068,27 @@ func (w *Writer) propagate(v Value) error {
 	_, err := multi.Write(v.Marshal())
 
 	return err
+}
+
+// Helper functions
+func mergeChans(ctx context.Context, chans []chan WatchEvent) chan WatchEvent {
+	out := make(chan WatchEvent)
+	var once sync.Once
+	for _, ch := range chans {
+		go func(c chan WatchEvent) {
+			select {
+			case res := <-c:
+				once.Do(func() {
+					out <- res
+					close(out)
+
+				})
+			case <-ctx.Done():
+				return
+			}
+
+		}(ch)
+	}
+
+	return out
 }
