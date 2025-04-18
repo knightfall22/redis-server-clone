@@ -25,6 +25,11 @@ var (
 	connMu      sync.Mutex
 )
 
+type setVal struct {
+	value   string
+	timeout *time.Time
+}
+
 var (
 	SETs   = map[string]setVal{}
 	SETsMu = sync.RWMutex{}
@@ -349,6 +354,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.config(args))
 	case "ECHO":
 		return w.Write(w.echo(args))
+	case "INCR":
+		return w.Write(w.incr(args))
 	case "XADD":
 		return w.Write(w.xAdd(args))
 	case "XRANGE":
@@ -677,6 +684,29 @@ func (w *Writer) echo(args []Value) Value {
 	}
 
 	return Value{typ: "bulk", bulk: args[0].bulk}
+}
+
+// TRANSACTIONS
+func (w *Writer) incr(args []Value) Value {
+	if len(args) < 1 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'incr' command"}
+	}
+
+	key := args[0].bulk
+
+	SETsMu.Lock()
+	defer SETsMu.Unlock()
+
+	var num int
+	if item, ok := SETs[key]; ok {
+		num, _ = strconv.Atoi(item.value)
+		num++
+	} else {
+		num = 1
+		SETs[key] = setVal{timeout: nil, value: "1"}
+	}
+
+	return Value{typ: "integer", integer: num}
 }
 
 func (w *Writer) xAdd(args []Value) Value {
