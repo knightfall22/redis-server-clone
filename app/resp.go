@@ -354,8 +354,12 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.config(args))
 	case "ECHO":
 		return w.Write(w.echo(args))
+	//Transactions:
 	case "INCR":
 		return w.Write(w.incr(args))
+	case "MULTI":
+		return w.Write(w.multi(args))
+	//Stream:
 	case "XADD":
 		return w.Write(w.xAdd(args))
 	case "XRANGE":
@@ -713,6 +717,12 @@ func (w *Writer) incr(args []Value) Value {
 	SETs[key] = setVal{timeout: nil, value: strconv.Itoa(num)}
 	return Value{typ: "integer", integer: num}
 }
+
+func (w *Writer) multi(args []Value) Value {
+	return Value{typ: "string", str: "OK"}
+}
+
+//STREAMS
 
 func (w *Writer) xAdd(args []Value) Value {
 	if len(args) < 4 {
