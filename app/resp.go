@@ -852,13 +852,14 @@ func (w *Writer) xread(args []Value) Value {
 				}
 
 				keyId := ids[i].bulk
-				ch := make(chan WatchEvent, 1)
+				ch := make(chan WatchEvent)
 				watchers[v][keyId] = append(watchers[v][keyId], ch)
 				chans = append(chans, ch)
 			}
 			streamMu.Unlock()
 
 			if blockTime == 0 {
+				//Feels hacky but it works
 				blockTime = 21234324324343243
 			}
 			duration := time.Duration(blockTime * int(time.Millisecond))
