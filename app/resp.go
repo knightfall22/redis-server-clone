@@ -701,11 +701,12 @@ func (w *Writer) incr(args []Value) Value {
 	if item, ok := SETs[key]; ok {
 		num, _ = strconv.Atoi(item.value)
 		num++
+
 	} else {
 		num = 1
-		SETs[key] = setVal{timeout: nil, value: "1"}
 	}
 
+	SETs[key] = setVal{timeout: nil, value: strconv.Itoa(num)}
 	return Value{typ: "integer", integer: num}
 }
 
