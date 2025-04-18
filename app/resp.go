@@ -831,9 +831,12 @@ func (w *Writer) xread(args []Value) Value {
 		for i, key := range keys {
 			if streamTree, ok := stream[key]; ok {
 				prefix := []byte(ids[i].bulk)
+
+				if string(prefix) == "$" {
+					continue
+				}
 				it := streamTree.Root().Iterator()
 				it.SeekLowerBound(prefix)
-				fmt.Println(prefix)
 
 				for tKey, _, ok := it.Next(); ok; tKey, _, ok = it.Next() {
 					if bytes.Compare(tKey, prefix) == 1 {
