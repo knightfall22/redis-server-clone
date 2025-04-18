@@ -698,8 +698,9 @@ func (w *Writer) incr(args []Value) Value {
 	defer SETsMu.Unlock()
 
 	var num int
+	var err error
 	if item, ok := SETs[key]; ok {
-		num, err := strconv.Atoi(item.value)
+		num, err = strconv.Atoi(item.value)
 		if err != nil {
 			return Value{typ: "error", str: "ERR value is not an integer or out of range"}
 		}
