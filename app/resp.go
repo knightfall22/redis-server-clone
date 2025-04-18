@@ -819,7 +819,7 @@ func (w *Writer) xread(args []Value) Value {
 
 	//Explanation the reason why locks and unlocks are peformed in this manner is because we need to free
 	//up the resource so that it can be used in the `xadd` function. Note: Might not be the best way to do this
-	if blockTime != 0 {
+	if blockTime >= 0 {
 		streamMu.Lock()
 		var exists bool
 		//If blocktime is not 0 but key exists proceed in any of the provided trees proceed as now
@@ -858,13 +858,15 @@ func (w *Writer) xread(args []Value) Value {
 			}
 			streamMu.Unlock()
 
+			if blockTime == 0 {
+				blockTime = 21234324324343243
+			}
 			duration := time.Duration(blockTime * int(time.Millisecond))
 			ctx, cancel := context.WithTimeout(context.Background(), duration)
 			defer cancel()
 
 			select {
 			case res := <-mergeChans(ctx, chans):
-				fmt.Println("from block", res)
 				cancel()
 
 				//transform into appropriate return value:
