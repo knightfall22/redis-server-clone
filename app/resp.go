@@ -359,6 +359,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.incr(args))
 	case "MULTI":
 		return w.Write(w.multi(args))
+	case "EXEC":
+		return w.Write(w.exec(args))
 	//Stream:
 	case "XADD":
 		return w.Write(w.xAdd(args))
@@ -720,6 +722,10 @@ func (w *Writer) incr(args []Value) Value {
 
 func (w *Writer) multi(args []Value) Value {
 	return Value{typ: "string", str: "OK"}
+}
+
+func (w *Writer) exec(args []Value) Value {
+	return Value{typ: "error", str: "ERR EXEC without MULTI"}
 }
 
 //STREAMS
