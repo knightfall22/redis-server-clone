@@ -699,7 +699,10 @@ func (w *Writer) incr(args []Value) Value {
 
 	var num int
 	if item, ok := SETs[key]; ok {
-		num, _ = strconv.Atoi(item.value)
+		num, err := strconv.Atoi(item.value)
+		if err != nil {
+			return Value{typ: "error", str: "ERR value is not an integer or out of range"}
+		}
 		num++
 
 	} else {
