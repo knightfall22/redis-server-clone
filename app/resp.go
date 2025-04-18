@@ -714,12 +714,17 @@ func (w *Writer) xAdd(args []Value) Value {
 	//Notify all watchers of an id if inserted id is lexicographically greater
 	if prefixes, ok := watchers[key]; ok {
 		for k, _ := range prefixes {
-			//if key are lexigraphically greater
-			if bytes.Compare([]byte(id), []byte(k)) == 1 {
+			if k == "$" {
 				for _, ch := range prefixes[k] {
 					fmt.Println("Lexi", WatchEvent{stream: key, id: id})
 					ch <- WatchEvent{stream: key, id: id}
-					break
+				}
+
+				//if key are lexigraphically greater
+			} else if bytes.Compare([]byte(id), []byte(k)) == 1 {
+				for _, ch := range prefixes[k] {
+					fmt.Println("Lexi", WatchEvent{stream: key, id: id})
+					ch <- WatchEvent{stream: key, id: id}
 				}
 			}
 		}
