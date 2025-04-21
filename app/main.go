@@ -107,6 +107,7 @@ func main() {
 		go func(conn net.Conn) {
 			defer conn.Close()
 			resp := NewResp(conn)
+			writer := NewWriter(conn)
 			for {
 
 				value, err := resp.Read()
@@ -126,8 +127,6 @@ func main() {
 					fmt.Println("Invalid request, expected array length > 0")
 					continue
 				}
-
-				writer := NewWriter(conn)
 
 				err = writer.Handler(value)
 				if err != nil {

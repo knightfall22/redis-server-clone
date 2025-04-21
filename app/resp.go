@@ -220,7 +220,7 @@ type Writer struct {
 }
 
 func NewWriter(w io.Writer) *Writer {
-	return &Writer{writer: w}
+	return &Writer{writer: w, transaction: false, queue: make([]Value, 0)}
 }
 
 func (w *Writer) Write(v Value) error {
@@ -730,7 +730,9 @@ func (w *Writer) multi(args []Value) Value {
 func (w *Writer) exec(args []Value) Value {
 
 	ret := Value{typ: "array"}
-	if w.transaction && len(w.queue) == 0 {
+	fmt.Println(len(w.queue))
+	fmt.Println("is transaction:", w.transaction)
+	if w.transaction {
 		return ret
 	}
 
