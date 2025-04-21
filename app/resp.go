@@ -729,14 +729,15 @@ func (w *Writer) multi(args []Value) Value {
 
 func (w *Writer) exec(args []Value) Value {
 
-	ret := Value{typ: "array"}
-	if w.transaction && len(w.queue) == 0 {
-		w.transaction = false
-		return ret
+	if !w.transaction {
+		return Value{typ: "error", str: "ERR EXEC without MULTI"}
 	}
 
+	ret := Value{typ: "array"}
+
 	w.transaction = false
-	return Value{typ: "error", str: "ERR EXEC without MULTI"}
+	return ret
+
 }
 
 //STREAMS
