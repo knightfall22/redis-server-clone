@@ -363,6 +363,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.multi(args))
 	case "EXEC":
 		return w.Write(w.exec(args))
+	case "DISCARD":
+		return w.Write(w.discard(args))
 	//Stream:
 	case "XADD":
 		return w.Write(w.xAdd(v, args))
@@ -793,6 +795,15 @@ func (w *Writer) exec(args []Value) Value {
 	w.transaction = false
 	return ret
 
+}
+
+func (w *Writer) discard(args []Value) Value {
+	if w.transaction {
+		w.transaction = false
+		w.queue = make([]Value, 0)
+		return Value{typ: "string", str: "OK"}
+	}
+	return Value{typ: "error", str: "ERR DISCARD without MULTI"}
 }
 
 //STREAMS
