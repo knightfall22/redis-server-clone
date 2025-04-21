@@ -337,39 +337,39 @@ func (w *Writer) Handler(v Value) error {
 	case "SET":
 		return w.Write(w.set(v, args))
 	case "GET":
-		return w.Write(w.get(args))
+		return w.Write(w.get(v, args))
 	case "PSYNC":
-		return w.psync(args)
+		return w.psync(v, args)
 	case "TYPE":
-		return w.Write(w.typeIdent(args))
+		return w.Write(w.typeIdent(v, args))
 	case "PING":
-		return w.Write(w.ping(args))
+		return w.Write(w.ping(v, args))
 	case "REPLCONF":
-		return w.Write(w.replconf(args))
+		return w.Write(w.replconf(v, args))
 	case "INFO":
-		return w.Write(w.info(args))
+		return w.Write(w.info(v, args))
 	case "WAIT":
-		return w.Write(w.wait(args))
+		return w.Write(w.wait(v, args))
 	case "KEYS":
-		return w.Write(w.keys(args))
+		return w.Write(w.keys(v, args))
 	case "CONFIG":
-		return w.Write(w.config(args))
+		return w.Write(w.config(v, args))
 	case "ECHO":
-		return w.Write(w.echo(args))
+		return w.Write(w.echo(v, args))
 	//Transactions:
 	case "INCR":
-		return w.Write(w.incr(args))
+		return w.Write(w.incr(v, args))
 	case "MULTI":
 		return w.Write(w.multi(args))
 	case "EXEC":
 		return w.Write(w.exec(args))
 	//Stream:
 	case "XADD":
-		return w.Write(w.xAdd(args))
+		return w.Write(w.xAdd(v, args))
 	case "XRANGE":
-		return w.Write(w.xrange(args))
+		return w.Write(w.xrange(v, args))
 	case "XREAD":
-		return w.Write(w.xread(args))
+		return w.Write(w.xread(v, args))
 	default:
 		return w.Write(Value{typ: "string", str: ""})
 	}
@@ -386,7 +386,7 @@ func (w *Writer) HandleSlave(v Value) error {
 	case "SET":
 		w.set(v, args)
 	case "REPLCONF":
-		err = w.Write(w.replconf(args))
+		err = w.Write(w.replconf(v, args))
 	default:
 		err = w.Write(Value{typ: "string", str: ""})
 	}
@@ -400,7 +400,7 @@ func (w *Writer) HandleSlave(v Value) error {
 	return err
 }
 
-func (w *Writer) info(args []Value) Value {
+func (w *Writer) info(v Value, args []Value) Value {
 	if len(args) == 0 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"}
 	}
@@ -455,6 +455,10 @@ func (w *Writer) set(v Value, args []Value) Value {
 		value.timeout = nil
 	}
 
+	if w.transaction {
+		return w.queuer(v)
+	}
+
 	SETsMu.Lock()
 	SETs[key] = value
 	SETsMu.Unlock()
@@ -467,9 +471,13 @@ func (w *Writer) set(v Value, args []Value) Value {
 	return Value{typ: "string", str: "OK"}
 }
 
-func (w *Writer) get(args []Value) Value {
+func (w *Writer) get(v Value, args []Value) Value {
 	if len(args) != 1 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	key := args[0].bulk
@@ -493,9 +501,13 @@ func (w *Writer) get(args []Value) Value {
 	return Value{typ: "bulk", bulk: val.value}
 }
 
-func (w *Writer) typeIdent(args []Value) Value {
+func (w *Writer) typeIdent(v Value, args []Value) Value {
 	if len(args) != 1 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'type'  command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	key := args[0].bulk
@@ -508,7 +520,11 @@ func (w *Writer) typeIdent(args []Value) Value {
 	return Value{typ: "string", str: "none"}
 }
 
-func (w *Writer) ping(args []Value) Value {
+func (w *Writer) ping(v Value, args []Value) Value {
+	if w.transaction {
+		return w.queuer(v)
+	}
+
 	if len(args) == 0 {
 		return Value{typ: "string", str: "PONG"}
 	}
@@ -516,9 +532,13 @@ func (w *Writer) ping(args []Value) Value {
 	return Value{typ: "string", str: args[0].bulk}
 }
 
-func (w *Writer) psync(args []Value) error {
+func (w *Writer) psync(v Value, args []Value) error {
 	if len(args) != 2 {
 		w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"})
+	}
+
+	if w.transaction {
+		return w.Write(w.queuer(v))
 	}
 
 	id := ConfigMap["masterID"]
@@ -542,7 +562,7 @@ func (w *Writer) psync(args []Value) error {
 	return nil
 }
 
-func (w *Writer) replconf(args []Value) Value {
+func (w *Writer) replconf(v Value, args []Value) Value {
 	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'replconf' command"}
 	}
@@ -551,7 +571,7 @@ func (w *Writer) replconf(args []Value) Value {
 
 	switch command {
 	case "GETACK":
-		fmt.Println("Say hello")
+
 		return Value{typ: "array", array: []Value{
 			{typ: "bulk", bulk: "REPLCONF"},
 			{typ: "bulk", bulk: "ACK"},
@@ -561,13 +581,13 @@ func (w *Writer) replconf(args []Value) Value {
 	case "ACK":
 		chanChan <- true
 		fmt.Println("hello angel")
-		return Value{}
+		return Value{typ: "string", str: ""}
 	default:
 		return Value{typ: "string", str: "OK"}
 	}
 }
 
-func (w *Writer) wait(args []Value) Value {
+func (w *Writer) wait(v Value, args []Value) Value {
 	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'wait' command"}
 	}
@@ -605,9 +625,13 @@ loop:
 	return Value{typ: "integer", integer: ackBoi}
 }
 
-func (w *Writer) keys(args []Value) Value {
+func (w *Writer) keys(v Value, args []Value) Value {
 	if len(args) < 1 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'key' command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	SETsMu.RLock()
@@ -622,7 +646,7 @@ func (w *Writer) keys(args []Value) Value {
 	return arrVal
 }
 
-func (w *Writer) config(args []Value) Value {
+func (w *Writer) config(v Value, args []Value) Value {
 	if len(args) == 0 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'config' command"}
 	}
@@ -632,19 +656,23 @@ func (w *Writer) config(args []Value) Value {
 	switch command {
 	case "GET":
 		if len(args) == 1 {
-			return w.configGetAll()
+			return w.configGetAll(v)
 		}
-		return w.configGet(args[1:])
+		return w.configGet(v, args[1:])
 	case "SET":
-		return w.configSet(args[1:])
+		return w.configSet(v, args[1:])
 	}
 
 	return Value{typ: "error", str: "ERR error has occured with the 'config' command"}
 }
 
-func (w *Writer) configGet(args []Value) Value {
+func (w *Writer) configGet(v Value, args []Value) Value {
 	if len(args) == 0 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'config get' command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	fmt.Printf("args: %#v\n", args)
@@ -662,7 +690,10 @@ func (w *Writer) configGet(args []Value) Value {
 	return arrVal
 }
 
-func (w *Writer) configGetAll() Value {
+func (w *Writer) configGetAll(v Value) Value {
+	if w.transaction {
+		return w.queuer(v)
+	}
 	result := Value{typ: "array"}
 
 	for k, v := range ConfigMap {
@@ -673,9 +704,13 @@ func (w *Writer) configGetAll() Value {
 	return result
 }
 
-func (w *Writer) configSet(args []Value) Value {
+func (w *Writer) configSet(v Value, args []Value) Value {
 	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'set' command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	key := args[0].bulk
@@ -686,18 +721,26 @@ func (w *Writer) configSet(args []Value) Value {
 	return Value{typ: "string", str: "OK"}
 }
 
-func (w *Writer) echo(args []Value) Value {
+func (w *Writer) echo(v Value, args []Value) Value {
 	if len(args) == 0 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'echo' command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	return Value{typ: "bulk", bulk: args[0].bulk}
 }
 
 // TRANSACTIONS
-func (w *Writer) incr(args []Value) Value {
+func (w *Writer) incr(v Value, args []Value) Value {
 	if len(args) < 1 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'incr' command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	key := args[0].bulk
@@ -742,7 +785,7 @@ func (w *Writer) exec(args []Value) Value {
 
 //STREAMS
 
-func (w *Writer) xAdd(args []Value) Value {
+func (w *Writer) xAdd(v Value, args []Value) Value {
 	if len(args) < 4 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xadd' command"}
 	}
@@ -765,6 +808,10 @@ func (w *Writer) xAdd(args []Value) Value {
 		v := vals[i+1].bulk
 
 		kvs = append(kvs, MapKVs{Key: k, Value: v})
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	streamMu.Lock()
@@ -798,9 +845,13 @@ func (w *Writer) xAdd(args []Value) Value {
 	return Value{typ: "bulk", bulk: id}
 }
 
-func (w *Writer) xrange(args []Value) Value {
+func (w *Writer) xrange(v Value, args []Value) Value {
 	if len(args) < 3 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xrange' command"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	ret := Value{typ: "array"}
@@ -850,10 +901,11 @@ func (w *Writer) xrange(args []Value) Value {
 	return ret
 }
 
-func (w *Writer) xread(args []Value) Value {
+func (w *Writer) xread(v Value, args []Value) Value {
 	if len(args) < 3 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'xread' command"}
 	}
+
 	var blockTime int
 	//Read block
 	if strings.ToUpper(args[0].bulk) == "BLOCK" {
@@ -868,6 +920,10 @@ func (w *Writer) xread(args []Value) Value {
 
 	if len(args[1:])%2 != 0 {
 		return Value{typ: "error", str: "ERR Unbalanced 'xread' list of streams: for each stream key an ID or '$' must be specified"}
+	}
+
+	if w.transaction {
+		return w.queuer(v)
 	}
 
 	keyLen := len(args[1:]) / 2
@@ -1142,6 +1198,12 @@ func (w *Writer) propagate(v Value) error {
 	_, err := multi.Write(v.Marshal())
 
 	return err
+}
+
+// Transaction queuer
+func (w *Writer) queuer(v Value) Value {
+	w.queue = append(w.queue, v)
+	return Value{typ: "string", str: "QUEUED"}
 }
 
 // Helper functions
