@@ -537,9 +537,9 @@ func (w *Writer) psync(v Value, args []Value) error {
 		w.Write(Value{typ: "error", str: "ERR wrong number of arguments for 'info'  command"})
 	}
 
-	if w.transaction {
-		return w.Write(w.queuer(v))
-	}
+	// if w.transaction {
+	// 	return w.Write(w.queuer(v))
+	// }
 
 	id := ConfigMap["masterID"]
 	offset := ConfigMap["masterOffset"]
@@ -766,7 +766,11 @@ func (w *Writer) incr(v Value, args []Value) Value {
 }
 
 func (w *Writer) multi(args []Value) Value {
+	if w.transaction {
+		return Value{typ: "error", str: "ERR MULTI called inside a transaction"}
+	}
 	w.transaction = true
+	w.queue = make([]Value, 0)
 	return Value{typ: "string", str: "OK"}
 }
 
@@ -776,7 +780,15 @@ func (w *Writer) exec(args []Value) Value {
 		return Value{typ: "error", str: "ERR EXEC without MULTI"}
 	}
 
+	w.transaction = false
 	ret := Value{typ: "array"}
+
+	fmt.Println(len(w.queue))
+	for i := 0; i < len(w.queue); i++ {
+		val := w.processQueue(w.queue[i])
+		fmt.Println(val)
+		ret.array = append(ret.array, val)
+	}
 
 	w.transaction = false
 	return ret
@@ -1204,6 +1216,44 @@ func (w *Writer) propagate(v Value) error {
 func (w *Writer) queuer(v Value) Value {
 	w.queue = append(w.queue, v)
 	return Value{typ: "string", str: "QUEUED"}
+}
+
+// Process queue
+// Note: Not the ideal way to do this at all
+func (w *Writer) processQueue(v Value) Value {
+	command := strings.ToUpper(v.array[0].bulk)
+	args := v.array[1:]
+
+	switch command {
+	case "SET":
+		return w.set(v, args)
+	case "GET":
+		return w.get(v, args)
+	case "TYPE":
+		return w.typeIdent(v, args)
+	case "PING":
+		return w.ping(v, args)
+	case "INFO":
+		return w.info(v, args)
+	case "KEYS":
+		return w.keys(v, args)
+	case "CONFIG":
+		return w.config(v, args)
+	case "ECHO":
+		return w.echo(v, args)
+	//Transactions:
+	case "INCR":
+		return w.incr(v, args)
+	//Stream:
+	case "XADD":
+		return w.xAdd(v, args)
+	case "XRANGE":
+		return w.xrange(v, args)
+	case "XREAD":
+		return w.xread(v, args)
+	default:
+		return Value{typ: "string", str: ""}
+	}
 }
 
 // Helper functions
