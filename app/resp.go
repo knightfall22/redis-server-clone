@@ -730,9 +730,8 @@ func (w *Writer) multi(args []Value) Value {
 func (w *Writer) exec(args []Value) Value {
 
 	ret := Value{typ: "array"}
-	fmt.Println(len(w.queue))
-	fmt.Println("is transaction:", w.transaction)
-	if w.transaction {
+	if w.transaction && len(w.queue) == 0 {
+		w.transaction = false
 		return ret
 	}
 
