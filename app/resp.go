@@ -581,7 +581,7 @@ func (w *Writer) replconf(v Value, args []Value) Value {
 	case "ACK":
 		chanChan <- true
 		fmt.Println("hello angel")
-		return Value{typ: "string", str: ""}
+		return Value{}
 	default:
 		return Value{typ: "string", str: "OK"}
 	}
