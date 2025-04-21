@@ -214,7 +214,9 @@ func (r *Resp) readBulk() (Value, error) {
 // Writing Resp
 
 type Writer struct {
-	writer io.Writer
+	writer     io.Writer
+	queue      []Value
+	transation bool
 }
 
 func NewWriter(w io.Writer) *Writer {
@@ -721,10 +723,18 @@ func (w *Writer) incr(args []Value) Value {
 }
 
 func (w *Writer) multi(args []Value) Value {
+	w.transation = true
 	return Value{typ: "string", str: "OK"}
 }
 
 func (w *Writer) exec(args []Value) Value {
+
+	ret := Value{typ: "array"}
+	if len(w.queue) == 0 {
+		return ret
+	}
+
+	w.transation = false
 	return Value{typ: "error", str: "ERR EXEC without MULTI"}
 }
 
