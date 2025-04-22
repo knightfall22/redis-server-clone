@@ -1002,7 +1002,7 @@ func (w *Writer) xread(v Value, args []Value) Value {
 				}
 
 				keyId := ids[i].bulk
-				ch := make(chan WatchEvent, 1)
+				ch := make(chan WatchEvent)
 				watchers[v][keyId] = append(watchers[v][keyId], ch)
 				chans = append(chans, ch)
 
