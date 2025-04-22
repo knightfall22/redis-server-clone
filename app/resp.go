@@ -864,7 +864,6 @@ func (w *Writer) xAdd(v Value, args []Value) Value {
 
 		delete(watchers, key) //cleanup
 	}
-
 	return Value{typ: "bulk", bulk: id}
 }
 
@@ -930,13 +929,14 @@ func (w *Writer) xread(v Value, args []Value) Value {
 	}
 
 	var blockTime int
+	var block bool
 	//Read block
 	if strings.ToUpper(args[0].bulk) == "BLOCK" {
 		time, err := strconv.Atoi(args[1].bulk)
 		if err != nil {
 			return Value{typ: "error", str: "ERR invalid block time"}
 		}
-
+		block = true
 		blockTime = time
 		args = args[2:]
 	}
@@ -966,7 +966,7 @@ func (w *Writer) xread(v Value, args []Value) Value {
 
 	//Explanation the reason why locks and unlocks are peformed in this manner is because we need to free
 	//up the resource so that it can be used in the `xadd` function. Note: Might not be the best way to do this
-	if blockTime >= 0 {
+	if block {
 		streamMu.Lock()
 		var exists bool
 		//If blocktime is not 0 but key exists proceed in any of the provided trees proceed as now
@@ -1002,9 +1002,10 @@ func (w *Writer) xread(v Value, args []Value) Value {
 				}
 
 				keyId := ids[i].bulk
-				ch := make(chan WatchEvent)
+				ch := make(chan WatchEvent, 1)
 				watchers[v][keyId] = append(watchers[v][keyId], ch)
 				chans = append(chans, ch)
+
 			}
 			streamMu.Unlock()
 
@@ -1121,9 +1122,10 @@ func (w *Writer) validate(key string, id *string) error {
 				tr++
 			}
 
-			*id = strings.Join([]string{strconv.Itoa(int(miliTime)), strconv.Itoa(tr)}, "-")
+			*id = fmt.Sprintf("%d-%d", miliTime, tr)
+
 		} else {
-			*id = strings.Join([]string{strconv.Itoa(int(miliTime)), strconv.Itoa(0)}, "-")
+			*id = fmt.Sprintf("%d-%d", miliTime, 0)
 		}
 
 		return nil
@@ -1159,18 +1161,19 @@ func (w *Writer) validate(key string, id *string) error {
 				tr++
 			}
 
-			*id = strings.Join([]string{strconv.Itoa(tl), strconv.Itoa(tr)}, "-")
+			*id = fmt.Sprintf("%d-%d", tl, tr)
 			return nil
 		} else {
 			IDSplit := strings.Split(*id, "-")
-			l := IDSplit[0]
+			l, _ := strconv.Atoi(IDSplit[0])
 			r := 0
 
-			if l == "0" {
+			if l == 0 {
 				r++
 			}
 
-			*id = strings.Join([]string{l, strconv.Itoa(r)}, "-")
+			*id = fmt.Sprintf("%d-%d", l, r)
+
 			return nil
 		}
 	}
@@ -1269,18 +1272,16 @@ func (w *Writer) processQueue(v Value) Value {
 
 // Helper functions
 func mergeChans(ctx context.Context, chans []chan WatchEvent) chan WatchEvent {
-	out := make(chan WatchEvent)
-	var once sync.Once
+	out := make(chan WatchEvent, len(chans))
+	// var once sync.Once
 	for _, ch := range chans {
 		go func(c chan WatchEvent) {
 			select {
 			case res := <-c:
-				once.Do(func() {
-					out <- res
-					close(out)
-
-				})
+				out <- res
+				return
 			case <-ctx.Done():
+				close(out)
 				return
 			}
 
