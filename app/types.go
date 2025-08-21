@@ -107,16 +107,19 @@ func (l *LinkedList) Add(values ...string) int {
 }
 
 func (l *LinkedList) Range(top, bottom int) []string {
+
 	if top < 0 {
 		top = 0
 	} else if top > l.Length {
-		return nil
-	} else if top > bottom {
 		return nil
 	}
 
 	if bottom < 0 {
 		bottom = l.Length
+	}
+
+	if top > bottom {
+		return nil
 	}
 
 	node := l.Get(top)
