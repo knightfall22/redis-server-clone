@@ -643,7 +643,7 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 		returnArray.array = append(returnArray.array, Value{typ: "bulk", bulk: res})
 		return returnArray
 	case <-ctx.Done():
-		return Value{typ: "bulk"}
+		return Value{typ: "null"}
 	}
 }
 
