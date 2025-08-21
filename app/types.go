@@ -117,8 +117,8 @@ func (l *LinkedList) Range(top, bottom int) []string {
 	}
 
 	if bottom < 0 {
-		fmt.Println("bottom", bottom)
 		bottom = l.Length + bottom
+		fmt.Println("bottom", bottom)
 	}
 
 	if top > bottom {
