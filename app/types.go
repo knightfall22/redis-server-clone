@@ -47,6 +47,16 @@ var (
 	topStream = make(map[string]string)
 )
 
+type ListWatchReceiver struct {
+	ch          chan string
+	timeStarted time.Time
+}
+
+var (
+	ListMu      = sync.RWMutex{}
+	ListWatcher = make(map[string][]ListWatchReceiver)
+	Lists       = make(map[string]*LinkedList)
+)
 var (
 	offset   = 0
 	offsetMu sync.Mutex
@@ -70,10 +80,6 @@ type Value struct {
 	array    []Value
 	contents []byte
 }
-
-var (
-	Lists = make(map[string]*LinkedList)
-)
 
 type Node struct {
 	value string

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -285,6 +286,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.lrange(v, args))
 	case "LPOP":
 		return w.Write(w.lpop(v, args))
+	case "BLPOP":
+		return w.Write(w.lbop(v, args))
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -513,6 +516,31 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 		values[i] = val.bulk
 	}
 
+	//check if waiting for value to be added into list
+	ListMu.RLock()
+	if w, ok := ListWatcher[key]; ok {
+		//check who has waited the longest
+		slices.SortFunc(w, func(a, b ListWatchReceiver) int {
+			if a.timeStarted.Before(b.timeStarted) {
+				return -1
+			}
+
+			if a.timeStarted.After(b.timeStarted) {
+				return 1
+			}
+
+			return 0
+		})
+
+		winner := ListWatcher[key][0]
+		ListWatcher[key] = ListWatcher[key][1:]
+
+		winner.ch <- values[0]
+		values = values[1:]
+
+	}
+	ListMu.RUnlock()
+
 	result := Lists[key].RAdd(values...)
 
 	return Value{typ: "integer", integer: result}
@@ -553,6 +581,61 @@ func (w *Writer) lrange(v Value, args []Value) Value {
 		resultArr.array = append(resultArr.array, Value{typ: "bulk", bulk: v})
 	}
 	return resultArr
+}
+
+func (w *Writer) lbop(v Value, args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
+	}
+
+	key := args[0].bulk
+
+	blockTime, err := strconv.Atoi(args[1].bulk)
+	if err != nil {
+		return Value{typ: "error", str: "ERR invalid block time"}
+	}
+
+	if blockTime == 0 {
+		blockTime = 21234324324343243
+	}
+
+	duration := time.Duration(blockTime * int(time.Second))
+	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	defer cancel()
+
+	//Register listeners
+	ListMu.Lock()
+	listener := ListWatchReceiver{
+		ch:          make(chan string, 1),
+		timeStarted: time.Now(),
+	}
+
+	ListWatcher[key] = append(ListWatcher[key], listener)
+	ListMu.Unlock()
+
+	select {
+	case res := <-readLbop(ctx, listener):
+		cancel()
+		return Value{typ: "bulk", bulk: res}
+	case <-ctx.Done():
+		return Value{typ: "null"}
+	}
+}
+
+func readLbop(ctx context.Context, l ListWatchReceiver) chan string {
+	out := make(chan string, 1)
+	go func(out chan string) {
+		select {
+		case res := <-l.ch:
+			out <- res
+			return
+		case <-ctx.Done():
+			close(out)
+			return
+		}
+	}(out)
+
+	return out
 }
 
 func (w *Writer) get(v Value, args []Value) Value {
@@ -1093,6 +1176,7 @@ func (w *Writer) xread(v Value, args []Value) Value {
 				//Feels hacky but it works
 				blockTime = 21234324324343243
 			}
+
 			duration := time.Duration(blockTime * int(time.Millisecond))
 			ctx, cancel := context.WithTimeout(context.Background(), duration)
 			defer cancel()
