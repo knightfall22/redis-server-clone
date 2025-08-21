@@ -90,7 +90,7 @@ func (n *Node) getUntil(index int) (out []string) {
 	for node := n; node != nil; node = node.next {
 		out = append(out, node.value)
 
-		if node.index != index {
+		if node.index == index {
 			break
 		}
 	}
