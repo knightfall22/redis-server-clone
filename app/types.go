@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -117,6 +118,26 @@ func (l *LinkedList) RAdd(values ...string) int {
 	return l.Length
 }
 
+func (l *LinkedList) radd(value string) {
+	node := &Node{
+		value: value,
+	}
+
+	//If head and tail are empty add new node to them
+	if l.Head == nil && l.Tail == nil {
+		l.Head = node
+		l.Tail = node
+		fmt.Println(l.Head.value)
+		return
+	}
+
+	l.Tail.index++
+	l.Tail = l.Head
+	l.Head = node
+	l.Head.next = l.Tail
+	fmt.Println(l.Head.next.value)
+}
+
 func (l *LinkedList) Range(top, bottom int) []string {
 
 	if top < 0 {
@@ -170,22 +191,4 @@ func (l *LinkedList) add(value string) {
 	node.index = l.Tail.index + 1
 	l.Tail.next = node
 	l.Tail = node
-}
-
-func (l *LinkedList) radd(value string) {
-	node := &Node{
-		value: value,
-	}
-
-	//If head and tail are empty add new node to them
-	if l.Head == nil && l.Tail == nil {
-		l.Head = node
-		l.Tail = node
-		return
-	}
-
-	node.index = l.Tail.index + 1
-	l.Tail = l.Head
-	l.Head = node
-	l.Head.next = l.Tail
 }
