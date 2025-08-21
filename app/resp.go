@@ -440,6 +440,29 @@ func (w *Writer) rpush(v Value, args []Value) Value {
 		values[i] = val.bulk
 	}
 
+	//check if waiting for value to be added into list
+	ListMu.RLock()
+	if w, ok := ListWatcher[key]; ok {
+		//check who has waited the longest
+		slices.SortFunc(w, func(a, b ListWatchReceiver) int {
+			if a.timeStarted.Before(b.timeStarted) {
+				return -1
+			}
+
+			if a.timeStarted.After(b.timeStarted) {
+				return 1
+			}
+
+			return 0
+		})
+
+		winner := ListWatcher[key][0]
+		ListWatcher[key] = ListWatcher[key][1:]
+
+		winner.ch <- values[0]
+	}
+	ListMu.RUnlock()
+
 	result := Lists[key].Add(values...)
 
 	return Value{typ: "integer", integer: result}
@@ -536,8 +559,6 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 		ListWatcher[key] = ListWatcher[key][1:]
 
 		winner.ch <- values[0]
-		values = values[1:]
-
 	}
 	ListMu.RUnlock()
 
@@ -589,6 +610,7 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 	}
 
 	key := args[0].bulk
+	fmt.Println("Hello")
 
 	blockTime, err := strconv.Atoi(args[1].bulk)
 	if err != nil {
@@ -623,7 +645,7 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 }
 
 func readLbop(ctx context.Context, l ListWatchReceiver) chan string {
-	out := make(chan string, 1)
+	out := make(chan string)
 	go func(out chan string) {
 		select {
 		case res := <-l.ch:
