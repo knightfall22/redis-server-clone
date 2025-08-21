@@ -467,7 +467,29 @@ func (w *Writer) lpop(v Value, args []Value) Value {
 		return Value{typ: "bulk"}
 	}
 
-	return Value{typ: "bulk", bulk: Lists[key].Pop()}
+	numStr := "1"
+	if len(args[0:]) > 1 {
+		numStr = args[1].bulk
+	}
+
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return Value{typ: "error", str: err.Error()}
+	}
+
+	if num == 1 {
+		return Value{typ: "bulk", bulk: Lists[key].Pop()}
+	}
+
+	returnArr := Value{typ: "array"}
+	for range 2 {
+		returnArr.array = append(returnArr.array, Value{
+			typ:  "bulk",
+			bulk: Lists[key].Pop(),
+		})
+	}
+
+	return returnArr
 }
 
 func (w *Writer) lpush(v Value, args []Value) Value {
@@ -905,14 +927,12 @@ func (w *Writer) xAdd(v Value, args []Value) Value {
 		for k, _ := range prefixes {
 			if k == "$" {
 				for _, ch := range prefixes[k] {
-					fmt.Println("Lexi", WatchEvent{stream: key, id: id})
 					ch <- WatchEvent{stream: key, id: id}
 				}
 
 				//if key are lexigraphically greater
 			} else if bytes.Compare([]byte(id), []byte(k)) == 1 {
 				for _, ch := range prefixes[k] {
-					fmt.Println("Lexi", WatchEvent{stream: key, id: id})
 					ch <- WatchEvent{stream: key, id: id}
 				}
 			}
