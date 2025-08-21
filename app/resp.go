@@ -451,6 +451,7 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 	insert := args[1:]
 	values := make([]string, 0, len(args[1:]))
 
+	fmt.Println("Hello", insert)
 	for i := len(args[1:]); i > 0; i-- {
 		values = append(values, insert[i-1].bulk)
 	}
