@@ -454,6 +454,8 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 		values = append(values, args[i-1].bulk)
 	}
 
+	fmt.Println("Hello", values)
+
 	result := Lists[key].Add(values...)
 
 	return Value{typ: "integer", integer: result}
