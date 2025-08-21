@@ -481,8 +481,12 @@ func (w *Writer) lpop(v Value, args []Value) Value {
 		return Value{typ: "bulk", bulk: Lists[key].Pop()}
 	}
 
+	if num > Lists[key].Length {
+		num = Lists[key].Length
+	}
+
 	returnArr := Value{typ: "array"}
-	for range 2 {
+	for range num {
 		returnArr.array = append(returnArr.array, Value{
 			typ:  "bulk",
 			bulk: Lists[key].Pop(),
