@@ -638,7 +638,10 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 	select {
 	case res := <-readLbop(ctx, listener):
 		cancel()
-		return Value{typ: "bulk", bulk: res}
+		returnArray := Value{typ: "array"}
+		returnArray.array = append(returnArray.array, Value{typ: "bulk", bulk: key})
+		returnArray.array = append(returnArray.array, Value{typ: "bulk", bulk: res})
+		return returnArray
 	case <-ctx.Done():
 		return Value{typ: "bulk"}
 	}
