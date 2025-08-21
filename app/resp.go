@@ -455,8 +455,6 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 		values = append(values, insert[i-1].bulk)
 	}
 
-	fmt.Println("Values", values)
-
 	result := Lists[key].Add(values...)
 
 	return Value{typ: "integer", integer: result}
@@ -490,6 +488,8 @@ func (w *Writer) lrange(v Value, args []Value) Value {
 	if res == nil {
 		return resultArr
 	}
+
+	fmt.Println("Results", res)
 
 	for _, v := range res {
 		resultArr.array = append(resultArr.array, Value{typ: "bulk", bulk: v})
