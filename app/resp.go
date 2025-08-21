@@ -338,6 +338,9 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.set(v, args))
 	case "GET":
 		return w.Write(w.get(v, args))
+	case "RPUSH":
+		return w.Write(w.rpush(v, args))
+
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -471,6 +474,10 @@ func (w *Writer) set(v Value, args []Value) Value {
 	w.propagate(v)
 
 	return Value{typ: "string", str: "OK"}
+}
+
+func (w *Writer) rpush(v Value, args []Value) Value {
+	return Value{typ: "integer", integer: 1}
 }
 
 func (w *Writer) get(v Value, args []Value) Value {
@@ -1002,7 +1009,7 @@ func (w *Writer) xread(v Value, args []Value) Value {
 				}
 
 				keyId := ids[i].bulk
-				ch := make(chan WatchEvent)
+				ch := make(chan WatchEvent, 1)
 				watchers[v][keyId] = append(watchers[v][keyId], ch)
 				chans = append(chans, ch)
 
