@@ -459,15 +459,12 @@ func (w *Writer) lrange(v Value, args []Value) Value {
 		return Value{typ: "error", str: err.Error()}
 	}
 
-	fmt.Println("start", start)
-	fmt.Println("stop", stop)
 	res := Lists[key].Range(start, stop)
 
 	if res == nil {
 		return resultArr
 	}
 
-	fmt.Println("Array", res)
 	for _, v := range res {
 		resultArr.array = append(resultArr.array, Value{typ: "bulk", bulk: v})
 	}

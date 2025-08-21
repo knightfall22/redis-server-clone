@@ -152,7 +152,7 @@ func (l *LinkedList) add(value string) {
 		return
 	}
 
-	node.index++
+	node.index = l.Tail.index + 1
 	l.Tail.next = node
 	l.Tail = node
 }
