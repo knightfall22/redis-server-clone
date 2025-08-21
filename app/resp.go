@@ -279,6 +279,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.rpush(v, args))
 	case "LPUSH":
 		return w.Write(w.lpush(v, args))
+	case "LLEN":
+		return w.Write(w.llen(v, args))
 	case "LRANGE":
 		return w.Write(w.lrange(v, args))
 	case "PSYNC":
@@ -437,6 +439,21 @@ func (w *Writer) rpush(v Value, args []Value) Value {
 
 	return Value{typ: "integer", integer: result}
 }
+
+func (w *Writer) llen(v Value, args []Value) Value {
+	if len(args) < 1 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'llen' command"}
+	}
+
+	key := args[0].bulk
+
+	if _, ok := Lists[key]; !ok {
+		return Value{typ: "integer", integer: 0}
+	}
+
+	return Value{typ: "integer", integer: Lists[key].Length}
+}
+
 func (w *Writer) lpush(v Value, args []Value) Value {
 	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'rpush' command"}
