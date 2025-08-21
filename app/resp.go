@@ -283,6 +283,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.llen(v, args))
 	case "LRANGE":
 		return w.Write(w.lrange(v, args))
+	case "LPOP":
+		return w.Write(w.lpop(v, args))
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -452,6 +454,20 @@ func (w *Writer) llen(v Value, args []Value) Value {
 	}
 
 	return Value{typ: "integer", integer: Lists[key].Length}
+}
+
+func (w *Writer) lpop(v Value, args []Value) Value {
+	if len(args) < 1 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'llop' command"}
+	}
+
+	key := args[0].bulk
+
+	if _, ok := Lists[key]; !ok {
+		return Value{typ: "bulk"}
+	}
+
+	return Value{typ: "bulk", bulk: Lists[key].Pop()}
 }
 
 func (w *Writer) lpush(v Value, args []Value) Value {

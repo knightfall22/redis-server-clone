@@ -75,29 +75,31 @@ var (
 	Lists = make(map[string]*LinkedList)
 )
 
+type Node struct {
+	value string
+	next  *Node
+}
+
+func (n *Node) getUntil(count int) (out []string) {
+	i := 0
+	for node := n; node != nil; node = node.next {
+		out = append(out, node.value)
+
+		if i == count {
+			break
+		}
+		i++
+	}
+
+	return
+}
+
 type LinkedList struct {
 	Length int
 	Head   *Node
 	Tail   *Node
 }
 
-type Node struct {
-	index int
-	value string
-	next  *Node
-}
-
-func (n *Node) getUntil(index int) (out []string) {
-	for node := n; node != nil; node = node.next {
-		out = append(out, node.value)
-
-		if node.index == index {
-			break
-		}
-	}
-
-	return
-}
 func (l *LinkedList) Add(values ...string) int {
 	for _, v := range values {
 		l.add(v)
@@ -131,11 +133,22 @@ func (l *LinkedList) radd(value string) {
 		return
 	}
 
-	l.Tail.index++
 	l.Tail = l.Head
 	l.Head = node
 	l.Head.next = l.Tail
 	fmt.Println(l.Head.next.value)
+}
+
+func (l *LinkedList) Pop() string {
+	if l.Head == nil {
+		return ""
+	}
+
+	val := l.Head.value
+
+	l.Head = l.Head.next
+
+	return val
 }
 
 func (l *LinkedList) Range(top, bottom int) []string {
@@ -157,7 +170,7 @@ func (l *LinkedList) Range(top, bottom int) []string {
 
 	node := l.Get(top)
 
-	return node.getUntil(bottom)
+	return node.getUntil(bottom - top)
 }
 
 func (l *LinkedList) Get(index int) *Node {
@@ -166,11 +179,14 @@ func (l *LinkedList) Get(index int) *Node {
 	}
 
 	var resNode *Node
+	i := 0
 	for node := l.Head; node != nil; node = node.next {
-		if node.index == index {
-			resNode = node
+		resNode = node
+
+		if index == i {
 			break
 		}
+		i++
 	}
 
 	return resNode
@@ -188,7 +204,6 @@ func (l *LinkedList) add(value string) {
 		return
 	}
 
-	node.index = l.Tail.index + 1
 	l.Tail.next = node
 	l.Tail = node
 }
