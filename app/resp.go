@@ -618,7 +618,7 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 		cancel()
 		return Value{typ: "bulk", bulk: res}
 	case <-ctx.Done():
-		return Value{typ: "null"}
+		return Value{typ: "bulk"}
 	}
 }
 
