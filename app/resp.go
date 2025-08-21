@@ -277,7 +277,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.get(v, args))
 	case "RPUSH":
 		return w.Write(w.rpush(v, args))
-
+	case "LRANGE":
+		return w.Write(w.lrange(v, args))
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -433,6 +434,34 @@ func (w *Writer) rpush(v Value, args []Value) Value {
 	result := Lists[key].Add(values...)
 
 	return Value{typ: "integer", integer: result}
+}
+
+func (w *Writer) lrange(v Value, args []Value) Value {
+	if len(args) < 3 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'lrange' command"}
+	}
+
+	resultArr := Value{typ: "array"}
+
+	key := args[0].bulk
+
+	if _, ok := Lists[key]; !ok {
+		return resultArr
+	}
+
+	start := args[1].integer
+	stop := args[2].integer
+
+	res := Lists[key].Range(start, stop)
+
+	if res == nil {
+		return resultArr
+	}
+
+	for _, v := range res {
+		resultArr.array = append(resultArr.array, Value{bulk: v})
+	}
+	return resultArr
 }
 
 func (w *Writer) get(v Value, args []Value) Value {

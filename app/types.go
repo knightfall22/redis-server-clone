@@ -80,6 +80,23 @@ type LinkedList struct {
 	Tail   *Node
 }
 
+type Node struct {
+	index int
+	value string
+	next  *Node
+}
+
+func (n *Node) getUntil(index int) (out []string) {
+	for node := n; node != nil; node = node.next {
+		out = append(out, node.value)
+
+		if node.index != index {
+			break
+		}
+	}
+
+	return
+}
 func (l *LinkedList) Add(values ...string) int {
 	for _, v := range values {
 		l.add(v)
@@ -87,6 +104,40 @@ func (l *LinkedList) Add(values ...string) int {
 
 	l.Length += len(values)
 	return l.Length
+}
+
+func (l *LinkedList) Range(top, bottom int) []string {
+	if top < 0 {
+		top = 0
+	} else if top > l.Length {
+		return nil
+	} else if top > bottom {
+		return nil
+	}
+
+	if bottom < 0 {
+		bottom = l.Length
+	}
+
+	node := l.Get(top)
+
+	return node.getUntil(bottom)
+}
+
+func (l *LinkedList) Get(index int) *Node {
+	if index >= l.Length {
+		index = l.Length - 1
+	}
+
+	var resNode *Node
+	for node := l.Head; node != nil; node = node.next {
+		if node.index == index {
+			resNode = node
+			break
+		}
+	}
+
+	return resNode
 }
 
 func (l *LinkedList) add(value string) {
@@ -101,11 +152,7 @@ func (l *LinkedList) add(value string) {
 		return
 	}
 
+	node.index++
 	l.Tail.next = node
 	l.Tail = node
-}
-
-type Node struct {
-	value string
-	next  *Node
 }
