@@ -4,77 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	iradix "github.com/hashicorp/go-immutable-radix/v2"
 )
-
-var signalSearch = make(chan []byte)
-var available = make(chan []byte)
-
-var ERRInvalidCommand = errors.New("ERR invalid command")
-
-var (
-	connections []io.Writer
-	connMu      sync.Mutex
-)
-
-type setVal struct {
-	value   string
-	timeout *time.Time
-}
-
-var (
-	SETs   = map[string]setVal{}
-	SETsMu = sync.RWMutex{}
-)
-
-type MapKVs struct {
-	Key   string
-	Value string
-}
-
-type WatchEvent struct {
-	stream string
-	id     string
-}
-
-var (
-	stream    = map[string]*iradix.Tree[[]MapKVs]{}
-	watchers  = make(map[string]map[string][]chan WatchEvent)
-	streamMu  = sync.RWMutex{}
-	topStream = make(map[string]string)
-)
-
-var (
-	offset   = 0
-	offsetMu sync.Mutex
-)
-
-const (
-	STRING  = '+'
-	ERROR   = '-'
-	ARRAY   = '*'
-	MAP     = '%'
-	BULK    = '$'
-	INTEGER = ':'
-)
-
-type Value struct {
-	typ      string
-	str      string
-	integer  int
-	len      int
-	bulk     string
-	array    []Value
-	contents []byte
-}
 
 type Resp struct {
 	reader *bufio.Reader
@@ -477,7 +414,25 @@ func (w *Writer) set(v Value, args []Value) Value {
 }
 
 func (w *Writer) rpush(v Value, args []Value) Value {
-	return Value{typ: "integer", integer: 1}
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'rpush' command"}
+	}
+
+	key := args[0].bulk
+
+	if _, ok := Lists[key]; !ok {
+		Lists[key] = &LinkedList{}
+	}
+
+	values := make([]string, len(args[1:]))
+
+	for i, val := range args[1:] {
+		values[i] = val.bulk
+	}
+
+	result := Lists[key].Add(values...)
+
+	return Value{typ: "integer", integer: result}
 }
 
 func (w *Writer) get(v Value, args []Value) Value {
