@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -110,11 +111,13 @@ func (l *LinkedList) Range(top, bottom int) []string {
 
 	if top < 0 {
 		top = l.Length + top
+		fmt.Println("top", top)
 	} else if top > l.Length {
 		return nil
 	}
 
 	if bottom < 0 {
+		fmt.Println("bottom", bottom)
 		bottom = l.Length + bottom
 	}
 
