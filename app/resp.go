@@ -448,14 +448,13 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 		Lists[key] = &LinkedList{}
 	}
 
-	insert := args[1:]
-	values := make([]string, 0, len(args[1:]))
+	values := make([]string, len(args[1:]))
 
-	for i := len(args[1:]); i > 0; i-- {
-		values = append(values, insert[i-1].bulk)
+	for i, val := range args[1:] {
+		values[i] = val.bulk
 	}
 
-	result := Lists[key].Add(values...)
+	result := Lists[key].RAdd(values...)
 
 	return Value{typ: "integer", integer: result}
 }
