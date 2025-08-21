@@ -612,7 +612,7 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 	key := args[0].bulk
 	fmt.Println("Hello")
 
-	blockTime, err := strconv.Atoi(args[1].bulk)
+	blockTime, err := strconv.ParseFloat(args[1].bulk, 64)
 	if err != nil {
 		return Value{typ: "error", str: "ERR invalid block time"}
 	}
@@ -621,7 +621,7 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 		blockTime = 21234324324343243
 	}
 
-	duration := time.Duration(blockTime * int(time.Second))
+	duration := time.Duration(blockTime * float64(time.Second))
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
 
