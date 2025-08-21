@@ -277,6 +277,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.get(v, args))
 	case "RPUSH":
 		return w.Write(w.rpush(v, args))
+	case "LPUSH":
+		return w.Write(w.lpush(v, args))
 	case "LRANGE":
 		return w.Write(w.lrange(v, args))
 	case "PSYNC":
@@ -429,6 +431,27 @@ func (w *Writer) rpush(v Value, args []Value) Value {
 
 	for i, val := range args[1:] {
 		values[i] = val.bulk
+	}
+
+	result := Lists[key].Add(values...)
+
+	return Value{typ: "integer", integer: result}
+}
+func (w *Writer) lpush(v Value, args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'rpush' command"}
+	}
+
+	key := args[0].bulk
+
+	if _, ok := Lists[key]; !ok {
+		Lists[key] = &LinkedList{}
+	}
+
+	values := make([]string, len(args[1:]))
+
+	for i := len(values); i > 0; i-- {
+		values = append(values, args[i-1].bulk)
 	}
 
 	result := Lists[key].Add(values...)
