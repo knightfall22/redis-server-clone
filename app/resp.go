@@ -448,10 +448,11 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 		Lists[key] = &LinkedList{}
 	}
 
+	insert := args[1:]
 	values := make([]string, len(args[1:]))
 
-	for i := len(values) - 1; i >= 0; i-- {
-		values = append(values, args[i].bulk)
+	for i := len(values); i > 0; i-- {
+		values = append(values, insert[i-1].bulk)
 	}
 
 	fmt.Println("Hello", values)
