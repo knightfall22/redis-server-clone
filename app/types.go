@@ -103,9 +103,8 @@ func (l *LinkedList) Add(values ...string) int {
 		l.add(v)
 	}
 
-	fmt.Println("VIVI", values)
-
 	l.Length += len(values)
+	fmt.Println("VIVI", l.Length)
 	return l.Length
 }
 
