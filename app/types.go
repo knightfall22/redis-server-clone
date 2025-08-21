@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -101,6 +102,8 @@ func (l *LinkedList) Add(values ...string) int {
 	for _, v := range values {
 		l.add(v)
 	}
+
+	fmt.Println("VIVI", values)
 
 	l.Length += len(values)
 	return l.Length
