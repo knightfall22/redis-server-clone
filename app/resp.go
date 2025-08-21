@@ -449,17 +449,27 @@ func (w *Writer) lrange(v Value, args []Value) Value {
 		return resultArr
 	}
 
-	start := args[1].integer
-	stop := args[2].integer
+	start, err := strconv.Atoi(args[1].bulk)
+	if err != nil {
+		return Value{typ: "error", str: err.Error()}
+	}
 
+	stop, err := strconv.Atoi(args[2].bulk)
+	if err != nil {
+		return Value{typ: "error", str: err.Error()}
+	}
+
+	fmt.Println("start", start)
+	fmt.Println("stop", stop)
 	res := Lists[key].Range(start, stop)
 
 	if res == nil {
 		return resultArr
 	}
 
+	fmt.Println("Array", res)
 	for _, v := range res {
-		resultArr.array = append(resultArr.array, Value{bulk: v})
+		resultArr.array = append(resultArr.array, Value{typ: "bulk", bulk: v})
 	}
 	return resultArr
 }
