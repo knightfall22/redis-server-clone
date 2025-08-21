@@ -450,8 +450,8 @@ func (w *Writer) lpush(v Value, args []Value) Value {
 
 	values := make([]string, len(args[1:]))
 
-	for i := len(values); i > 0; i-- {
-		values = append(values, args[i-1].bulk)
+	for i := len(values) - 1; i >= 0; i-- {
+		values = append(values, args[i].bulk)
 	}
 
 	fmt.Println("Hello", values)
