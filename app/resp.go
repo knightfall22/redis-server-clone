@@ -681,11 +681,14 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 
 	var out int
 	SortedMu.Lock()
-	SortedSet[key] = NewSkipListSortedSet()
+	if SortedSet[key] == nil {
+		SortedSet[key] = NewSkipListSortedSet()
+	}
 	out = SortedSet[key].Add(ListValue{
 		score: score,
 		name:  value,
 	})
+	fmt.Println("Slicing Boiii", SortedSet[key].ToSlice())
 	SortedMu.Unlock()
 
 	return Value{typ: "integer", integer: out}

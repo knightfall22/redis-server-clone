@@ -275,10 +275,7 @@ func (s *SkipListSortedSet) Add(val ListValue) int {
 	current := s.head
 
 	for level := s.maxlevel; level >= 0; level-- {
-		fmt.Printf("   Level %d: ", level)
-
 		for current.next[level] != nil && bytes.Compare([]byte(val.name), []byte(current.next[level].value.name)) == 1 {
-			fmt.Printf("%+v -> ", current.next[level].value)
 			current = current.next[level]
 		}
 
