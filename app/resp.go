@@ -679,15 +679,16 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 
 	value := args[2].bulk
 
+	var out int
 	SortedMu.Lock()
 	SortedSet[key] = NewSkipListSortedSet()
-	SortedSet[key].Add(ListValue{
+	out = SortedSet[key].Add(ListValue{
 		score: score,
 		name:  value,
 	})
 	SortedMu.Unlock()
 
-	return Value{typ: "integer", integer: 1}
+	return Value{typ: "integer", integer: out}
 }
 
 func (w *Writer) get(cmd Value, args []Value) Value {

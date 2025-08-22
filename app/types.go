@@ -270,7 +270,7 @@ func (s *SkipListSortedSet) randomLevel() int {
 	return level
 }
 
-func (s *SkipListSortedSet) Add(val ListValue) bool {
+func (s *SkipListSortedSet) Add(val ListValue) int {
 	update := make([]*SkipListNode, MaxLevel+1)
 	current := s.head
 
@@ -292,7 +292,7 @@ func (s *SkipListSortedSet) Add(val ListValue) bool {
 		current.value.name == val.name {
 		current.value.score = val.score
 
-		return true
+		return 0
 	}
 
 	// Generate random level for new node
@@ -320,7 +320,7 @@ func (s *SkipListSortedSet) Add(val ListValue) bool {
 	}
 
 	s.size++
-	return true
+	return 1
 }
 
 func (s *SkipListSortedSet) Remove(name string) bool {
