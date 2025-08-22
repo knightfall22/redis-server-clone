@@ -618,10 +618,10 @@ func (w *Writer) lbop(v Value, args []Value) Value {
 	}
 
 	if blockTime == 0 {
-		blockTime = 21234324324343243
+		blockTime = 21234324
 	}
 
-	duration := time.Duration(blockTime * float64(time.Second))
+	duration := time.Duration(float64(time.Second) * blockTime)
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
 
