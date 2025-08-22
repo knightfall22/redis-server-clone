@@ -685,7 +685,7 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 		score: score,
 		name:  value,
 	})
-	SortedMu.Lock()
+	SortedMu.Unlock()
 
 	return Value{typ: "integer", integer: 1}
 }
