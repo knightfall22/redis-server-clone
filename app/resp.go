@@ -680,6 +680,7 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 	value := args[2].bulk
 
 	SortedMu.Lock()
+	SortedSet[key] = NewSkipListSortedSet()
 	SortedSet[key].Add(ListValue{
 		score: score,
 		name:  value,
