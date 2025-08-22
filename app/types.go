@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -212,4 +214,156 @@ func (l *LinkedList) add(value string) {
 
 	l.Tail.next = node
 	l.Tail = node
+}
+
+// //////////////////////////////////////
+// /SORT SETS///////////////////////////
+// ////////////////////////////////////
+var (
+	SortedMu  = sync.Mutex{}
+	SortedSet = make(map[string]*SkipListSortedSet)
+)
+
+type ListValue struct {
+	name  string
+	score float64
+}
+
+type SkipListNode struct {
+	value ListValue
+	next  []*SkipListNode
+}
+
+type SkipListSortedSet struct {
+	head     *SkipListNode
+	maxlevel int
+	size     int
+	rand     *rand.Rand
+}
+
+const MaxLevel = 15
+
+func NewSkipListSortedSet() *SkipListSortedSet {
+	// Create head node with sentinel value
+	head := &SkipListNode{
+		value: ListValue{
+			score: -1 << 31,
+		},
+		next: make([]*SkipListNode, MaxLevel+1),
+	}
+
+	return &SkipListSortedSet{
+		head:     head,
+		maxlevel: 0,
+		size:     0,
+		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
+	}
+}
+
+func (s *SkipListSortedSet) randomLevel() int {
+	level := 0
+
+	if s.rand.Float64() < 0.5 && level < MaxLevel {
+		level++
+	}
+
+	return level
+}
+
+func (s *SkipListSortedSet) Add(val ListValue) bool {
+	update := make([]*SkipListNode, MaxLevel+1)
+	current := s.head
+
+	for level := s.maxlevel; level >= 0; level-- {
+		fmt.Printf("   Level %d: ", level)
+
+		for current.next[level] != nil && bytes.Compare([]byte(val.name), []byte(current.next[level].value.name)) == 1 {
+			fmt.Printf("%+v -> ", current.next[level].value)
+			current = current.next[level]
+		}
+
+		update[level] = current
+	}
+
+	current = current.next[0]
+
+	// Check if value already exists
+	if current != nil &&
+		current.value.name == val.name {
+		current.value.score = val.score
+
+		return true
+	}
+
+	// Generate random level for new node
+	newLevel := s.randomLevel()
+
+	// If new level is higher than current max, update head pointers
+	if newLevel > s.maxlevel {
+		for i := s.maxlevel + 1; i <= newLevel; i++ {
+			update[i] = s.head
+		}
+
+		s.maxlevel = newLevel
+	}
+
+	// Create new node
+	newNode := &SkipListNode{
+		value: val,
+		next:  make([]*SkipListNode, newLevel+1),
+	}
+
+	// Insert the node at all levels up to its random level
+	for i := 0; i <= newLevel; i++ {
+		newNode.next[i] = update[i].next[i]
+		update[i].next[i] = newNode
+	}
+
+	s.size++
+	return true
+}
+
+func (s *SkipListSortedSet) Remove(name string) bool {
+	update := make([]*SkipListNode, MaxLevel+1)
+	current := s.head
+
+	for level := s.maxlevel; level >= 0; level-- {
+		for current.next[level] != nil && bytes.Compare([]byte(name), []byte(current.next[level].value.name)) == 1 {
+			current = current.next[level]
+		}
+
+		update[level] = current
+	}
+
+	current = current.next[0]
+
+	if current == nil || current.value.name != name {
+		return false
+	}
+
+	for i := 0; i <= s.maxlevel; i++ {
+		if update[i].next[i] != current {
+			break
+		}
+
+		update[i].next[i] = current.next[i]
+	}
+
+	// Update max level if necessary
+	for s.maxlevel > 0 && s.head.next[s.maxlevel] == nil {
+		s.maxlevel--
+	}
+
+	s.size--
+	return true
+}
+
+func (s *SkipListSortedSet) ToSlice() (result []ListValue) {
+	current := s.head.next[0]
+
+	for current != nil {
+		result = append(result, current.value)
+		current = current.next[0]
+	}
+	return
 }

@@ -288,6 +288,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.lpop(v, args))
 	case "BLPOP":
 		return w.Write(w.lbop(v, args))
+	case "ZADD":
+		return w.Write(w.zadd(v, args))
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -663,13 +665,37 @@ func readLbop(ctx context.Context, l ListWatchReceiver) chan string {
 	return out
 }
 
-func (w *Writer) get(v Value, args []Value) Value {
+func (w *Writer) zadd(cmd Value, args []Value) Value {
+	if len(args) < 3 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'zadd' command"}
+	}
+
+	key := args[0].bulk
+
+	score, err := strconv.ParseFloat(args[1].bulk, 64)
+	if err != nil {
+		return Value{typ: "error", str: "ERR invalid block time"}
+	}
+
+	value := args[2].bulk
+
+	SortedMu.Lock()
+	SortedSet[key].Add(ListValue{
+		score: score,
+		name:  value,
+	})
+	SortedMu.Lock()
+
+	return Value{typ: "integer", integer: 1}
+}
+
+func (w *Writer) get(cmd Value, args []Value) Value {
 	if len(args) != 1 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'get' command"}
 	}
 
 	if w.transaction {
-		return w.queuer(v)
+		return w.queuer(cmd)
 	}
 
 	key := args[0].bulk
