@@ -307,6 +307,7 @@ func GetRange(key string, start, stop int) []ListValue {
 	return SortedSet[key].zrange(start, stop)
 
 }
+
 func GetCard(key string) int {
 	SortedMu.Lock()
 	defer SortedMu.Unlock()
@@ -316,7 +317,16 @@ func GetCard(key string) int {
 	}
 
 	return SortedSet[key].size
+}
 
+func GetScore(key, name string) string {
+	ssMapKay := fmt.Sprintf("%s:%s", key, name)
+	item, ok := SortedSetMap[ssMapKay]
+	if !ok {
+		return ""
+	}
+
+	return fmt.Sprintf("%.2f", item.score)
 }
 
 func NewSkipListSortedSet() *SkipListSortedSet {
@@ -454,6 +464,24 @@ func (s *SkipListSortedSet) zrange(start, stop int) []ListValue {
 
 	return result
 }
+
+// func (s *SkipListSortedSet) retrieve(val ListValue) string {
+// 	current := s.head
+
+// 	for level := s.maxlevel; level >= 0; level-- {
+// 		for current.next[level] != nil && compare(current.next[level].value, val) < 0 {
+// 			current = current.next[level]
+// 		}
+// 	}
+
+// 	current = current.next[0]
+
+// 	if current != nil && current.value.name == val.name {
+// 		return current.value.name
+// 	}
+
+// 	return ""
+// }
 
 func (s *SkipListSortedSet) rank(val ListValue) int {
 	current := s.head
