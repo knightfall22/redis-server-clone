@@ -282,7 +282,7 @@ func (w *Writer) Handler(v Value) error {
 	if w.subscribeMode {
 		valid := w.commandValid(command)
 		if !valid {
-			msg := fmt.Sprintf("Err can't execute '%s' when one or more subscriptions exist", command)
+			msg := fmt.Sprintf("ERR Can't execute '%s' in subscribed mode", command)
 			return w.Write(Value{typ: "error", str: msg})
 		}
 	}
