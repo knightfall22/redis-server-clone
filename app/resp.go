@@ -1553,7 +1553,19 @@ func (w *Writer) unsubscribe(v Value, args []Value) Value {
 	SubsQueue[channel] = gSubsQueue
 	SubsQueueMu.Unlock()
 
-	return Value{typ: "integer", integer: length}
+	resp := Value{typ: "array"}
+
+	resp.array = append(resp.array, Value{
+		typ: "bulk", bulk: "unsubscribe",
+	})
+
+	resp.array = append(resp.array, Value{
+		typ: "bulk", bulk: channel,
+	})
+
+	resp.array = append(resp.array, Value{typ: "integer", integer: length})
+
+	return resp
 }
 
 func (w *Writer) validate(key string, id *string) error {
