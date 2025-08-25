@@ -1490,7 +1490,7 @@ func (w *Writer) receiveMessage() {
 				resp := Value{typ: "array"}
 
 				resp.array = append(resp.array, Value{
-					typ: "bulk", bulk: "PUBLISH",
+					typ: "bulk", bulk: "message",
 				})
 
 				resp.array = append(resp.array, Value{
