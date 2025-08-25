@@ -339,7 +339,7 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.subscribe(v, args))
 	case "PUBLISH":
 		return w.Write(w.publish(v, args))
-	case "Unsubscribe":
+	case "UNSUBSCRIBE":
 		return w.Write(w.unsubscribe(v, args))
 	//Transactions:
 	case "INCR":
