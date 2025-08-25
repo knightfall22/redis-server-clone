@@ -267,7 +267,9 @@ func AddToSortedList(key string, val ListValue) int {
 	oldVal := SortedSetMap[ssMapKay]
 	SortedSet[key].Remove(oldVal)
 
-	return SortedSet[key].add(val)
+	SortedSet[key].add(val)
+
+	return 0
 }
 
 func GetRank(key, name string) int {
