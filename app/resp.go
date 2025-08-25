@@ -1550,6 +1550,9 @@ func (w *Writer) unsubscribe(v Value, args []Value) Value {
 	idx := slices.Index(gSubsQueue, mychan)
 	gSubsQueue = append(gSubsQueue[idx:], gSubsQueue[:idx+1]...)
 	SubsQueue[channel] = gSubsQueue
+	if len(gSubsQueue) == 0 {
+		delete(SubsQueue, channel)
+	}
 	SubsQueueMu.Unlock()
 
 	resp := Value{typ: "array"}
