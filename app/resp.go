@@ -1425,7 +1425,7 @@ func (w *Writer) xread(v Value, args []Value) Value {
 }
 
 func (w *Writer) subscribe(v Value, args []Value) Value {
-	if len(args) < 2 {
+	if len(args) < 3 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'subscribe' command"}
 	}
 
