@@ -859,6 +859,20 @@ func (w *Writer) ping(v Value, args []Value) Value {
 		return w.queuer(v)
 	}
 
+	if w.subscribeMode {
+		ret := Value{typ: "array"}
+
+		ret.array = append(ret.array, Value{
+			typ: "bulk", bulk: "pong",
+		})
+
+		ret.array = append(ret.array, Value{
+			typ: "bulk", bulk: "",
+		})
+
+		return ret
+	}
+
 	if len(args) == 0 {
 		return Value{typ: "string", str: "PONG"}
 	}
