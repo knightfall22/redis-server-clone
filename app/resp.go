@@ -279,6 +279,13 @@ func (w *Writer) Handler(v Value) error {
 	command := strings.ToUpper(v.array[0].bulk)
 	args := v.array[1:]
 
+	if w.subscribeMode {
+		valid := w.commandValid(command)
+		if !valid {
+			return w.Write(Value{typ: "error", str: "ERR unknown command '" + command + "'"})
+		}
+	}
+
 	switch command {
 	case "SET":
 		return w.Write(w.set(v, args))
@@ -1567,6 +1574,15 @@ func (w *Writer) validate(key string, id *string) error {
 	}
 
 	return nil
+}
+
+func (w *Writer) commandValid(cmd string) bool {
+	switch cmd {
+	case "SUBSCRIBE", "UNSUBSCRIBE", "PSUBSCRIBE", "PUNSUBSCRIBE", "PING", "QUIT":
+		return true
+	default:
+		return false
+	}
 }
 
 // Write propagation
