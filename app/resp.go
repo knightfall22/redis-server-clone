@@ -290,6 +290,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.lbop(v, args))
 	case "ZADD":
 		return w.Write(w.zadd(v, args))
+	case "ZRANK":
+		return w.Write(w.zrank(v, args))
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -679,17 +681,36 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 
 	value := args[2].bulk
 
-	var out int
-	SortedMu.Lock()
-	if SortedSet[key] == nil {
-		SortedSet[key] = NewSkipListSortedSet()
-	}
-	out = SortedSet[key].Add(ListValue{
-		score: score,
+	out := AddToSortedList(key, ListValue{
 		name:  value,
+		score: score,
 	})
-	fmt.Println("Slicing Boiii", SortedSet[key].ToSlice())
-	SortedMu.Unlock()
+
+	return Value{typ: "integer", integer: out}
+}
+
+func (w *Writer) zrank(cmd Value, args []Value) Value {
+	if len(args) < 3 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'zadd' command"}
+	}
+
+	key := args[0].bulk
+
+	score, err := strconv.ParseFloat(args[1].bulk, 64)
+	if err != nil {
+		return Value{typ: "error", str: "ERR invalid block time"}
+	}
+
+	value := args[2].bulk
+
+	out := GetRank(key, ListValue{
+		name:  value,
+		score: score,
+	})
+
+	if out == -1 {
+		return Value{typ: "null"}
+	}
 
 	return Value{typ: "integer", integer: out}
 }

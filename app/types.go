@@ -220,8 +220,9 @@ func (l *LinkedList) add(value string) {
 // /SORT SETS///////////////////////////
 // ////////////////////////////////////
 var (
-	SortedMu  = sync.Mutex{}
-	SortedSet = make(map[string]*SkipListSortedSet)
+	SortedMu     = sync.Mutex{}
+	SortedSetMap = make(map[string]ListValue)
+	SortedSet    = make(map[string]*SkipListSortedSet)
 )
 
 type ListValue struct {
@@ -232,6 +233,7 @@ type ListValue struct {
 type SkipListNode struct {
 	value ListValue
 	next  []*SkipListNode
+	span  []int
 }
 
 type SkipListSortedSet struct {
@@ -243,6 +245,48 @@ type SkipListSortedSet struct {
 
 const MaxLevel = 15
 
+func AddToSortedList(key string, val ListValue) int {
+	SortedMu.Lock()
+	defer SortedMu.Unlock()
+
+	if SortedSet[key] == nil {
+		SortedSet[key] = NewSkipListSortedSet()
+	}
+
+	ssMapKay := fmt.Sprintf("%s:%s", key, val.name)
+	if _, ok := SortedSetMap[ssMapKay]; !ok {
+		SortedSetMap[ssMapKay] = ListValue{
+			name:  val.name,
+			score: val.score,
+		}
+
+		return SortedSet[key].add(val)
+	}
+
+	//pullout old value
+	oldVal := SortedSetMap[ssMapKay]
+	SortedSet[key].Remove(oldVal)
+
+	return SortedSet[key].add(val)
+}
+
+func GetRank(key string, val ListValue) int {
+	SortedMu.Lock()
+	defer SortedMu.Unlock()
+
+	ssMapKay := fmt.Sprintf("%s:%s", key, val.name)
+	if _, ok := SortedSetMap[ssMapKay]; !ok {
+		return -1
+	}
+
+	if SortedSet[key] == nil {
+		SortedSet[key] = NewSkipListSortedSet()
+	}
+
+	return SortedSet[key].rank(val)
+
+}
+
 func NewSkipListSortedSet() *SkipListSortedSet {
 	// Create head node with sentinel value
 	head := &SkipListNode{
@@ -250,6 +294,7 @@ func NewSkipListSortedSet() *SkipListSortedSet {
 			score: -1 << 31,
 		},
 		next: make([]*SkipListNode, MaxLevel+1),
+		span: make([]int, MaxLevel+1),
 	}
 
 	return &SkipListSortedSet{
@@ -270,26 +315,32 @@ func (s *SkipListSortedSet) randomLevel() int {
 	return level
 }
 
-func (s *SkipListSortedSet) Add(val ListValue) int {
+func compare(curr, val ListValue) bool {
+	if curr.score < val.score {
+		return true
+	} else if curr.score == val.score {
+		return bytes.Compare([]byte(val.name), []byte(curr.name)) == 1
+	}
+
+	return false
+}
+
+func (s *SkipListSortedSet) add(val ListValue) int {
 	update := make([]*SkipListNode, MaxLevel+1)
+	rank := make([]int, MaxLevel+1) // Track ranks during search
 	current := s.head
 
 	for level := s.maxlevel; level >= 0; level-- {
-		for current.next[level] != nil && bytes.Compare([]byte(val.name), []byte(current.next[level].value.name)) == 1 {
+		if level != s.maxlevel {
+			rank[level] = rank[level+1]
+		}
+
+		for current.next[level] != nil && compare(current.next[level].value, val) {
+			rank[level] += current.span[level]
 			current = current.next[level]
 		}
 
 		update[level] = current
-	}
-
-	current = current.next[0]
-
-	// Check if value already exists
-	if current != nil &&
-		current.value.name == val.name {
-		current.value.score = val.score
-
-		return 0
 	}
 
 	// Generate random level for new node
@@ -298,7 +349,9 @@ func (s *SkipListSortedSet) Add(val ListValue) int {
 	// If new level is higher than current max, update head pointers
 	if newLevel > s.maxlevel {
 		for i := s.maxlevel + 1; i <= newLevel; i++ {
+			rank[i] = 0
 			update[i] = s.head
+			update[i].span[i] = s.size
 		}
 
 		s.maxlevel = newLevel
@@ -314,18 +367,44 @@ func (s *SkipListSortedSet) Add(val ListValue) int {
 	for i := 0; i <= newLevel; i++ {
 		newNode.next[i] = update[i].next[i]
 		update[i].next[i] = newNode
+
+		//update spans
+		newNode.span[i] = update[i].span[i] - (rank[0] - rank[1])
+		update[i].span[i] = (rank[0] - rank[1]) + 1
+	}
+
+	// Update spans for levels not touched by new node
+	for i := newLevel + 1; i <= s.maxlevel; i++ {
+		update[i].span[i]++
 	}
 
 	s.size++
 	return 1
 }
 
-func (s *SkipListSortedSet) Remove(name string) bool {
+func (s *SkipListSortedSet) rank(val ListValue) int {
+	current := s.head
+	rank := 0
+
+	for level := s.maxlevel; level >= 0; level-- {
+		for current.next[level] != nil && compare(current.next[level].value, val) {
+			rank += current.span[level]
+			current = current.next[level]
+		}
+	}
+
+	if current != nil && current.value.name == val.name {
+		return rank
+	}
+	return -1
+}
+
+func (s *SkipListSortedSet) Remove(val ListValue) bool {
 	update := make([]*SkipListNode, MaxLevel+1)
 	current := s.head
 
 	for level := s.maxlevel; level >= 0; level-- {
-		for current.next[level] != nil && bytes.Compare([]byte(name), []byte(current.next[level].value.name)) == 1 {
+		for current.next[level] != nil && compare(current.next[level].value, val) {
 			current = current.next[level]
 		}
 
@@ -334,7 +413,7 @@ func (s *SkipListSortedSet) Remove(name string) bool {
 
 	current = current.next[0]
 
-	if current == nil || current.value.name != name {
+	if current == nil || current.value.name != val.name || current.value.score != val.score {
 		return false
 	}
 
