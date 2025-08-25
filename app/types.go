@@ -402,11 +402,13 @@ func (s *SkipListSortedSet) rank(val ListValue) int {
 	rank := 0
 
 	for level := s.maxlevel; level >= 0; level-- {
-		for current.next[level] != nil && compare(current.next[level].value, val) == 0 {
+		for current.next[level] != nil && compare(current.next[level].value, val) < 0 {
 			rank += current.span[level]
 			current = current.next[level]
 		}
 	}
+
+	current = current.next[0]
 
 	if current != nil && current.value.name == val.name {
 		return rank - 1
