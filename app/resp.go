@@ -602,6 +602,8 @@ func (w *Writer) lrange(v Value, args []Value) Value {
 		return resultArr
 	}
 
+	fmt.Println("Results", res)
+
 	for _, v := range res {
 		resultArr.array = append(resultArr.array, Value{typ: "bulk", bulk: v})
 	}
@@ -690,7 +692,7 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 }
 
 func (w *Writer) zrank(cmd Value, args []Value) Value {
-	if len(args) < 3 {
+	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'zrank' command"}
 	}
 
@@ -705,10 +707,9 @@ func (w *Writer) zrank(cmd Value, args []Value) Value {
 
 	return Value{typ: "integer", integer: out}
 }
-
 func (w *Writer) zrange(cmd Value, args []Value) Value {
 	if len(args) < 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'zadd' command"}
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'zrange' command"}
 	}
 
 	key := args[0].bulk
