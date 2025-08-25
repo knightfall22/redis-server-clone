@@ -1541,7 +1541,6 @@ func (w *Writer) unsubscribe(v Value, args []Value) Value {
 	mychan := w.subsQueue[channel]
 
 	delete(w.subsQueue, channel)
-	close(mychan)
 
 	length := len(w.subsQueue)
 
