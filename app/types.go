@@ -411,7 +411,7 @@ func (s *SkipListSortedSet) rank(val ListValue) int {
 	current = current.next[0]
 
 	if current != nil && current.value.name == val.name {
-		return rank - 1
+		return rank
 	}
 	return -1
 }
