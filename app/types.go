@@ -326,7 +326,7 @@ func GetScore(key, name string) string {
 		return ""
 	}
 
-	return fmt.Sprintf("%f", item.score)
+	return fmt.Sprintf("%.10f", item.score)
 }
 
 func NewSkipListSortedSet() *SkipListSortedSet {
