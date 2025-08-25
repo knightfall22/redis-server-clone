@@ -1518,9 +1518,9 @@ func (w *Writer) publish(v Value, args []Value) Value {
 	channel := args[0].bulk
 	msg := args[1].bulk
 
+	SubsQueueMu.Lock()
 	listenerChans := SubsQueue[channel]
 
-	SubsQueueMu.Lock()
 	length := len(listenerChans)
 
 	for _, ch := range listenerChans {
@@ -1548,7 +1548,7 @@ func (w *Writer) unsubscribe(v Value, args []Value) Value {
 	//Find and delete channel from global subs queue
 	gSubsQueue := SubsQueue[channel]
 	idx := slices.Index(gSubsQueue, mychan)
-	gSubsQueue = append(gSubsQueue[idx:], gSubsQueue[:idx+1]...)
+	gSubsQueue = append(gSubsQueue[:idx], gSubsQueue[idx+1:]...)
 	SubsQueue[channel] = gSubsQueue
 	if len(gSubsQueue) == 0 {
 		delete(SubsQueue, channel)
