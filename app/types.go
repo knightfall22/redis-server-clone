@@ -304,7 +304,6 @@ func GetRange(key string, start, stop int) []ListValue {
 		return nil
 	}
 
-	fmt.Println(SortedSet[key].ToSlice())
 	return SortedSet[key].zrange(start, stop)
 
 }
@@ -437,7 +436,7 @@ func (s *SkipListSortedSet) zrange(start, stop int) []ListValue {
 
 	var result []ListValue
 
-	for i := 0; i < stop && current != nil; i++ {
+	for i := 0; i <= stop && current != nil; i++ {
 		result = append(result, current.value)
 		current = current.next[0]
 	}
