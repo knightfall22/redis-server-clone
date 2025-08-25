@@ -294,6 +294,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.zrank(v, args))
 	case "ZRANGE":
 		return w.Write(w.zrange(v, args))
+	case "ZCARD":
+		return w.Write(w.zcard(v, args))
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -737,6 +739,17 @@ func (w *Writer) zrange(cmd Value, args []Value) Value {
 	}
 
 	return resultArr
+}
+func (w *Writer) zcard(cmd Value, args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'zcard' command"}
+	}
+
+	key := args[0].bulk
+
+	out := GetCard(key)
+
+	return Value{typ: "integer", integer: out}
 }
 
 func (w *Writer) get(cmd Value, args []Value) Value {

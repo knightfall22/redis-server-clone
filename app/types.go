@@ -307,6 +307,17 @@ func GetRange(key string, start, stop int) []ListValue {
 	return SortedSet[key].zrange(start, stop)
 
 }
+func GetCard(key string) int {
+	SortedMu.Lock()
+	defer SortedMu.Unlock()
+
+	if SortedSet[key] == nil {
+		return 0
+	}
+
+	return SortedSet[key].size
+
+}
 
 func NewSkipListSortedSet() *SkipListSortedSet {
 	// Create head node with sentinel value
