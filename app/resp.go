@@ -1442,6 +1442,7 @@ func (w *Writer) subscribe(v Value, args []Value) Value {
 	channel := args[0].bulk
 
 	w.subsQueue[channel] = make(chan struct{})
+	w.subscribeMode = true
 	subsNum := len(w.subsQueue)
 
 	returnArray.array = append(returnArray.array, Value{
