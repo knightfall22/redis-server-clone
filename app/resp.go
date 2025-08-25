@@ -1425,13 +1425,13 @@ func (w *Writer) xread(v Value, args []Value) Value {
 }
 
 func (w *Writer) subscribe(v Value, args []Value) Value {
-	if len(args) < 3 {
+	if len(args) < 1 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'subscribe' command"}
 	}
 
 	returnArray := Value{typ: "array"}
 
-	cmd := strings.ToUpper(v.bulk)
+	cmd := v.array[0].bulk
 	channel := args[0].bulk
 
 	w.subsQueue[channel] = make(chan struct{})
