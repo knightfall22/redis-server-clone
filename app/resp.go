@@ -1431,7 +1431,7 @@ func (w *Writer) subscribe(v Value, args []Value) Value {
 
 	returnArray := Value{typ: "array"}
 
-	cmd := v.array[0].bulk
+	cmd := strings.ToLower(v.array[0].bulk)
 	channel := args[0].bulk
 
 	w.subsQueue[channel] = make(chan struct{})
