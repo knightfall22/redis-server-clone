@@ -339,8 +339,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.subscribe(v, args))
 	case "PUBLISH":
 		return w.Write(w.publish(v, args))
-	case "UNPUBLISH":
-		return w.Write(w.unpublish(v, args))
+	case "Unsubscribe":
+		return w.Write(w.unsubscribe(v, args))
 	//Transactions:
 	case "INCR":
 		return w.Write(w.incr(v, args))
@@ -1531,7 +1531,7 @@ func (w *Writer) publish(v Value, args []Value) Value {
 	return Value{typ: "integer", integer: length}
 }
 
-func (w *Writer) unpublish(v Value, args []Value) Value {
+func (w *Writer) unsubscribe(v Value, args []Value) Value {
 	if len(args) > 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'publish' command"}
 	}
