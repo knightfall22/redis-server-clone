@@ -155,10 +155,18 @@ type Writer struct {
 	writer      io.Writer
 	queue       []Value
 	transaction bool
+
+	subsQueue     map[string]chan struct{}
+	subscribeMode bool
 }
 
 func NewWriter(w io.Writer) *Writer {
-	return &Writer{writer: w, transaction: false, queue: make([]Value, 0)}
+	return &Writer{
+		writer:      w,
+		transaction: false,
+		queue:       make([]Value, 0),
+		subsQueue:   make(map[string]chan struct{}),
+	}
 }
 
 func (w *Writer) Write(v Value) error {
@@ -318,6 +326,9 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.config(v, args))
 	case "ECHO":
 		return w.Write(w.echo(v, args))
+	//Subscriptions
+	case "SUBSCRIBE":
+		return w.Write(w.subscribe(v, args))
 	//Transactions:
 	case "INCR":
 		return w.Write(w.incr(v, args))
@@ -1411,6 +1422,34 @@ func (w *Writer) xread(v Value, args []Value) Value {
 	}
 	return ret
 
+}
+
+func (w *Writer) subscribe(v Value, args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'subscribe' command"}
+	}
+
+	returnArray := Value{typ: "array"}
+
+	cmd := strings.ToUpper(v.bulk)
+	channel := args[0].bulk
+
+	w.subsQueue[channel] = make(chan struct{})
+	subsNum := len(w.subsQueue)
+
+	returnArray.array = append(returnArray.array, Value{
+		typ: "bulk", bulk: cmd,
+	})
+
+	returnArray.array = append(returnArray.array, Value{
+		typ: "bulk", bulk: channel,
+	})
+
+	returnArray.array = append(returnArray.array, Value{
+		typ: "integer", integer: subsNum,
+	})
+
+	return returnArray
 }
 
 func (w *Writer) validate(key string, id *string) error {
