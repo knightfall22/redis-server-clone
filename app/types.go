@@ -566,3 +566,8 @@ func (s *SkipListSortedSet) ToSlice() (result []ListValue) {
 	}
 	return
 }
+
+var (
+	SubsQueue   = make(map[string][]chan struct{})
+	SubsQueueMu = sync.Mutex{}
+)

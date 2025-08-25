@@ -337,6 +337,8 @@ func (w *Writer) Handler(v Value) error {
 	//Subscriptions
 	case "SUBSCRIBE":
 		return w.Write(w.subscribe(v, args))
+	case "PUBLISH":
+		return w.Write(w.publish(v, args))
 	//Transactions:
 	case "INCR":
 		return w.Write(w.incr(v, args))
@@ -1456,9 +1458,13 @@ func (w *Writer) subscribe(v Value, args []Value) Value {
 	cmd := strings.ToLower(v.array[0].bulk)
 	channel := args[0].bulk
 
-	w.subsQueue[channel] = make(chan struct{})
+	w.subsQueue[channel] = make(chan struct{}, 1)
 	w.subscribeMode = true
 	subsNum := len(w.subsQueue)
+
+	SubsQueueMu.Lock()
+	SubsQueue[channel] = append(SubsQueue[channel], w.subsQueue[channel])
+	SubsQueueMu.Unlock()
 
 	returnArray.array = append(returnArray.array, Value{
 		typ: "bulk", bulk: cmd,
@@ -1473,6 +1479,23 @@ func (w *Writer) subscribe(v Value, args []Value) Value {
 	})
 
 	return returnArray
+}
+
+func (w *Writer) publish(v Value, args []Value) Value {
+	if len(args) > 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'publish' command"}
+	}
+
+	channel := args[0].bulk
+	_ = args[1].bulk
+
+	listenerChans := SubsQueue[channel]
+
+	SubsQueueMu.Lock()
+	length := len(listenerChans)
+	SubsQueueMu.Unlock()
+
+	return Value{typ: "integer", integer: length}
 }
 
 func (w *Writer) validate(key string, id *string) error {
