@@ -270,12 +270,13 @@ func AddToSortedList(key string, val ListValue) int {
 	return SortedSet[key].add(val)
 }
 
-func GetRank(key string, val ListValue) int {
+func GetRank(key, name string) int {
 	SortedMu.Lock()
 	defer SortedMu.Unlock()
 
-	ssMapKay := fmt.Sprintf("%s:%s", key, val.name)
-	if _, ok := SortedSetMap[ssMapKay]; !ok {
+	ssMapKay := fmt.Sprintf("%s:%s", key, name)
+	item, ok := SortedSetMap[ssMapKay]
+	if !ok {
 		return -1
 	}
 
@@ -283,7 +284,12 @@ func GetRank(key string, val ListValue) int {
 		SortedSet[key] = NewSkipListSortedSet()
 	}
 
-	return SortedSet[key].rank(val)
+	return SortedSet[key].rank(
+		ListValue{
+			name:  name,
+			score: item.score,
+		},
+	)
 
 }
 
@@ -318,8 +324,10 @@ func (s *SkipListSortedSet) randomLevel() int {
 func compare(curr, val ListValue) bool {
 	if curr.score < val.score {
 		return true
-	} else if curr.score == val.score {
-		return bytes.Compare([]byte(val.name), []byte(curr.name)) == 1
+	}
+
+	if bytes.Compare([]byte(val.name), []byte(curr.name)) == 1 {
+		return true
 	}
 
 	return false
@@ -361,6 +369,7 @@ func (s *SkipListSortedSet) add(val ListValue) int {
 	newNode := &SkipListNode{
 		value: val,
 		next:  make([]*SkipListNode, newLevel+1),
+		span:  make([]int, newLevel+1),
 	}
 
 	// Insert the node at all levels up to its random level
@@ -369,8 +378,8 @@ func (s *SkipListSortedSet) add(val ListValue) int {
 		update[i].next[i] = newNode
 
 		//update spans
-		newNode.span[i] = update[i].span[i] - (rank[0] - rank[1])
-		update[i].span[i] = (rank[0] - rank[1]) + 1
+		newNode.span[i] = update[i].span[i] - (rank[0] - rank[i])
+		update[i].span[i] = (rank[0] - rank[i]) + 1
 	}
 
 	// Update spans for levels not touched by new node
@@ -387,14 +396,14 @@ func (s *SkipListSortedSet) rank(val ListValue) int {
 	rank := 0
 
 	for level := s.maxlevel; level >= 0; level-- {
-		for current.next[level] != nil && compare(current.next[level].value, val) {
+		for current.next[level] != nil && !compare(current.next[level].value, val) {
 			rank += current.span[level]
 			current = current.next[level]
 		}
 	}
 
 	if current != nil && current.value.name == val.name {
-		return rank
+		return rank - 1
 	}
 	return -1
 }

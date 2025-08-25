@@ -690,23 +690,14 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 }
 
 func (w *Writer) zrank(cmd Value, args []Value) Value {
-	if len(args) < 3 {
+	if len(args) < 2 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'zadd' command"}
 	}
 
 	key := args[0].bulk
+	value := args[1].bulk
 
-	score, err := strconv.ParseFloat(args[1].bulk, 64)
-	if err != nil {
-		return Value{typ: "error", str: "ERR invalid block time"}
-	}
-
-	value := args[2].bulk
-
-	out := GetRank(key, ListValue{
-		name:  value,
-		score: score,
-	})
+	out := GetRank(key, value)
 
 	if out == -1 {
 		return Value{typ: "null"}
