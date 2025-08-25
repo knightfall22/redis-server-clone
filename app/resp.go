@@ -741,7 +741,7 @@ func (w *Writer) zrange(cmd Value, args []Value) Value {
 	return resultArr
 }
 func (w *Writer) zcard(cmd Value, args []Value) Value {
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return Value{typ: "error", str: "ERR wrong number of arguments for 'zcard' command"}
 	}
 
