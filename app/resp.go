@@ -339,6 +339,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.subscribe(v, args))
 	case "PUBLISH":
 		return w.Write(w.publish(v, args))
+	case "UNPUBLISH":
+		return w.Write(w.unpublish(v, args))
 	//Transactions:
 	case "INCR":
 		return w.Write(w.incr(v, args))
@@ -1525,6 +1527,31 @@ func (w *Writer) publish(v Value, args []Value) Value {
 	for _, ch := range listenerChans {
 		ch <- msg
 	}
+
+	return Value{typ: "integer", integer: length}
+}
+
+func (w *Writer) unpublish(v Value, args []Value) Value {
+	if len(args) > 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'publish' command"}
+	}
+
+	channel := args[0].bulk
+
+	mychan := w.subsQueue[channel]
+
+	delete(w.subsQueue, channel)
+	close(mychan)
+
+	length := len(w.subsQueue)
+
+	SubsQueueMu.Lock()
+	//Find and delete channel from global subs queue
+	gSubsQueue := SubsQueue[channel]
+	idx := slices.Index(gSubsQueue, mychan)
+	gSubsQueue = append(gSubsQueue[idx:], gSubsQueue[:idx+1]...)
+	SubsQueue[channel] = gSubsQueue
+	SubsQueueMu.Unlock()
 
 	return Value{typ: "integer", integer: length}
 }
