@@ -156,7 +156,7 @@ type Writer struct {
 	queue       []Value
 	transaction bool
 
-	subsQueue     map[string]chan struct{}
+	subsQueue     map[string]chan string
 	subscribeMode bool
 }
 
@@ -165,7 +165,7 @@ func NewWriter(w io.Writer) *Writer {
 		writer:      w,
 		transaction: false,
 		queue:       make([]Value, 0),
-		subsQueue:   make(map[string]chan struct{}),
+		subsQueue:   make(map[string]chan string),
 	}
 }
 
@@ -1458,7 +1458,7 @@ func (w *Writer) subscribe(v Value, args []Value) Value {
 	cmd := strings.ToLower(v.array[0].bulk)
 	channel := args[0].bulk
 
-	w.subsQueue[channel] = make(chan struct{}, 1)
+	w.subsQueue[channel] = make(chan string, 1)
 	w.subscribeMode = true
 	subsNum := len(w.subsQueue)
 
@@ -1478,7 +1478,34 @@ func (w *Writer) subscribe(v Value, args []Value) Value {
 		typ: "integer", integer: subsNum,
 	})
 
+	go w.receiveMessage()
+
 	return returnArray
+}
+
+func (w *Writer) receiveMessage() {
+	for k, ch := range w.subsQueue {
+		go func() {
+			for c := range ch {
+				resp := Value{typ: "array"}
+
+				resp.array = append(resp.array, Value{
+					typ: "bulk", bulk: "PUBLISH",
+				})
+
+				resp.array = append(resp.array, Value{
+					typ: "bulk", bulk: k,
+				})
+
+				resp.array = append(resp.array, Value{
+					typ: "bulk", bulk: c,
+				})
+
+				w.Write(resp)
+			}
+
+		}()
+	}
 }
 
 func (w *Writer) publish(v Value, args []Value) Value {
@@ -1487,13 +1514,17 @@ func (w *Writer) publish(v Value, args []Value) Value {
 	}
 
 	channel := args[0].bulk
-	_ = args[1].bulk
+	msg := args[1].bulk
 
 	listenerChans := SubsQueue[channel]
 
 	SubsQueueMu.Lock()
 	length := len(listenerChans)
 	SubsQueueMu.Unlock()
+
+	for _, ch := range listenerChans {
+		ch <- msg
+	}
 
 	return Value{typ: "integer", integer: length}
 }
