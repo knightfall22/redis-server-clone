@@ -267,6 +267,10 @@ func AddToSortedList(key string, val ListValue) int {
 	oldVal := SortedSetMap[ssMapKay]
 	SortedSet[key].Remove(oldVal)
 
+	SortedSetMap[ssMapKay] = ListValue{
+		name:  val.name,
+		score: val.score,
+	}
 	SortedSet[key].add(val)
 
 	return 0
@@ -325,6 +329,8 @@ func GetScore(key, name string) string {
 	if !ok {
 		return ""
 	}
+
+	fmt.Printf("Sorted SET MAP %+v", SortedSetMap)
 
 	return fmt.Sprintf("%.10f", item.score)
 }
