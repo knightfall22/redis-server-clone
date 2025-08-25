@@ -335,6 +335,20 @@ func GetScore(key, name string) string {
 	return fmt.Sprintf("%.10f", item.score)
 }
 
+func RemoveItem(key, name string) int {
+	ssMapKay := fmt.Sprintf("%s:%s", key, name)
+	item, ok := SortedSetMap[ssMapKay]
+	if !ok {
+		return 0
+	}
+
+	SortedSet[key].Remove(item)
+
+	delete(SortedSetMap, ssMapKay)
+
+	return 1
+}
+
 func NewSkipListSortedSet() *SkipListSortedSet {
 	// Create head node with sentinel value
 	head := &SkipListNode{
