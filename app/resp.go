@@ -1522,11 +1522,11 @@ func (w *Writer) publish(v Value, args []Value) Value {
 
 	SubsQueueMu.Lock()
 	length := len(listenerChans)
-	SubsQueueMu.Unlock()
 
 	for _, ch := range listenerChans {
 		ch <- msg
 	}
+	SubsQueueMu.Unlock()
 
 	return Value{typ: "integer", integer: length}
 }
