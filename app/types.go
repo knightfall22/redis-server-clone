@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -321,16 +320,21 @@ func (s *SkipListSortedSet) randomLevel() int {
 	return level
 }
 
-func compare(curr, val ListValue) bool {
-	if curr.score < val.score {
-		return true
+func compare(a, b ListValue) int {
+	if a.score < b.score {
+		return -1
 	}
-
-	if bytes.Compare([]byte(val.name), []byte(curr.name)) == 1 {
-		return true
+	if a.score > b.score {
+		return 1
 	}
-
-	return false
+	// Same score, compare by value lexicographically
+	if a.name < b.name {
+		return -1
+	}
+	if a.name > b.name {
+		return 1
+	}
+	return 0 // Equal
 }
 
 func (s *SkipListSortedSet) add(val ListValue) int {
@@ -343,7 +347,7 @@ func (s *SkipListSortedSet) add(val ListValue) int {
 			rank[level] = rank[level+1]
 		}
 
-		for current.next[level] != nil && compare(current.next[level].value, val) {
+		for current.next[level] != nil && compare(current.next[level].value, val) < 0 {
 			rank[level] += current.span[level]
 			current = current.next[level]
 		}
@@ -396,7 +400,7 @@ func (s *SkipListSortedSet) rank(val ListValue) int {
 	rank := 0
 
 	for level := s.maxlevel; level >= 0; level-- {
-		for current.next[level] != nil && !compare(current.next[level].value, val) {
+		for current.next[level] != nil && compare(current.next[level].value, val) < 0 {
 			rank += current.span[level]
 			current = current.next[level]
 		}
@@ -413,7 +417,7 @@ func (s *SkipListSortedSet) Remove(val ListValue) bool {
 	current := s.head
 
 	for level := s.maxlevel; level >= 0; level-- {
-		for current.next[level] != nil && compare(current.next[level].value, val) {
+		for current.next[level] != nil && compare(current.next[level].value, val) < 0 {
 			current = current.next[level]
 		}
 
