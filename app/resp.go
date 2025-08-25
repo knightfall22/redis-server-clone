@@ -292,6 +292,8 @@ func (w *Writer) Handler(v Value) error {
 		return w.Write(w.zadd(v, args))
 	case "ZRANK":
 		return w.Write(w.zrank(v, args))
+	case "ZRANGE":
+		return w.Write(w.zrange(v, args))
 	case "PSYNC":
 		return w.psync(v, args)
 	case "TYPE":
@@ -600,8 +602,6 @@ func (w *Writer) lrange(v Value, args []Value) Value {
 		return resultArr
 	}
 
-	fmt.Println("Results", res)
-
 	for _, v := range res {
 		resultArr.array = append(resultArr.array, Value{typ: "bulk", bulk: v})
 	}
@@ -690,8 +690,8 @@ func (w *Writer) zadd(cmd Value, args []Value) Value {
 }
 
 func (w *Writer) zrank(cmd Value, args []Value) Value {
-	if len(args) < 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'zadd' command"}
+	if len(args) < 3 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'zrank' command"}
 	}
 
 	key := args[0].bulk
@@ -704,6 +704,38 @@ func (w *Writer) zrank(cmd Value, args []Value) Value {
 	}
 
 	return Value{typ: "integer", integer: out}
+}
+
+func (w *Writer) zrange(cmd Value, args []Value) Value {
+	if len(args) < 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'zadd' command"}
+	}
+
+	key := args[0].bulk
+
+	start, err := strconv.Atoi(args[1].bulk)
+	if err != nil {
+		return Value{typ: "error", str: err.Error()}
+	}
+
+	stop, err := strconv.Atoi(args[2].bulk)
+	if err != nil {
+		return Value{typ: "error", str: err.Error()}
+	}
+
+	out := GetRange(key, start, stop)
+
+	resultArr := Value{typ: "array"}
+
+	if out == nil {
+		return resultArr
+	}
+
+	for _, v := range out {
+		resultArr.array = append(resultArr.array, Value{typ: "bulk", bulk: v.name})
+	}
+
+	return resultArr
 }
 
 func (w *Writer) get(cmd Value, args []Value) Value {

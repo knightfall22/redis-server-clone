@@ -296,6 +296,19 @@ func GetRank(key, name string) int {
 
 }
 
+func GetRange(key string, start, stop int) []ListValue {
+	SortedMu.Lock()
+	defer SortedMu.Unlock()
+
+	if SortedSet[key] == nil {
+		return nil
+	}
+
+	fmt.Println(SortedSet[key].ToSlice())
+	return SortedSet[key].zrange(start, stop)
+
+}
+
 func NewSkipListSortedSet() *SkipListSortedSet {
 	// Create head node with sentinel value
 	head := &SkipListNode{
@@ -397,6 +410,39 @@ func (s *SkipListSortedSet) add(val ListValue) int {
 
 	s.size++
 	return 1
+}
+
+func (s *SkipListSortedSet) zrange(start, stop int) []ListValue {
+	if start < 0 {
+		start = max(s.size+start, 0)
+	}
+
+	if stop < 0 {
+		stop = max(s.size+stop, 0)
+	}
+
+	if start > s.size || start > stop {
+		return nil
+	}
+
+	if stop > s.size {
+		stop = s.size
+	}
+
+	current := s.head.next[0]
+
+	for i := 0; i < start && current != nil; i++ {
+		current = current.next[0]
+	}
+
+	var result []ListValue
+
+	for i := 0; i < stop && current != nil; i++ {
+		result = append(result, current.value)
+		current = current.next[0]
+	}
+
+	return result
 }
 
 func (s *SkipListSortedSet) rank(val ListValue) int {
